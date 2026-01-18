@@ -1,7 +1,7 @@
 --[[ 
- AUTO WALK TRACK SYSTEM - HP READY v2
+ AUTO WALK TRACK SYSTEM - HP READY v3
  Theme : Dark Blue
- UI     : Scrollable, Smooth, Modular, History
+ UI     : Scrollable, Draggable, Modular, History, Speed Control
  Author : ChatGPT + Teyoo Fix
 ]]--
 
@@ -11,7 +11,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
-local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
@@ -22,7 +21,7 @@ if not isfolder("tracks") then makefolder("tracks") end
 -- STATE
 local recording, paused, playing, loopTrack = false,false,false,false
 local speed = 40
-local recordData, playIndex, playConn = {},1,nil
+local recordData, playConn = {}, nil
 
 -- THEME
 local THEME = {
@@ -114,7 +113,6 @@ local function createPanel(title)
     body.ScrollingDirection = Enum.ScrollingDirection.Y
     body.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    -- MINIMIZE TO ICON
     local iconBtn
     minimize.MouseButton1Click:Connect(function()
         body.Visible = not body.Visible
@@ -256,7 +254,7 @@ stopPlayBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- PLAY LOGIC
+-- PLAY LOGIC SESUAI TRACK DAN SPEED
 playBtn.MouseButton1Click:Connect(function()
     local fname = nameBox.Text
     if fname=="" then return toast("Pilih track dulu") end
@@ -286,7 +284,7 @@ loopBtn.MouseButton1Click:Connect(function()
     toast(loopTrack and "Loop: ON" or "Loop: OFF")
 end)
 
--- HISTORY PANEL
+-- HISTORY PANEL DRAGGABLE + SCROLLABLE + HAPUS TRACK
 historyBtn.MouseButton1Click:Connect(function()
     local histGui = Instance.new("ScreenGui",game.CoreGui)
     histGui.Name = "AutoWalkHistory_"..math.random(1000,9999)
@@ -294,6 +292,8 @@ historyBtn.MouseButton1Click:Connect(function()
     panel.Size = UDim2.fromOffset(360,400)
     panel.Position = UDim2.fromScale(0.05,0.2)
     panel.BackgroundColor3 = THEME.panel
+    panel.Active = true
+    panel.Draggable = true
     Instance.new("UICorner",panel).CornerRadius = UDim.new(0,18)
     local header = Instance.new("Frame",panel)
     header.Size = UDim2.new(1,0,0,36)
@@ -307,6 +307,7 @@ historyBtn.MouseButton1Click:Connect(function()
     closeBtn.TextColor3 = THEME.text
     closeBtn.BackgroundTransparency = 1
     closeBtn.MouseButton1Click:Connect(function() histGui:Destroy() end)
+
     local body = Instance.new("ScrollingFrame",panel)
     body.Size = UDim2.new(1,-10,1,-36)
     body.Position = UDim2.fromOffset(5,36)
@@ -319,8 +320,17 @@ historyBtn.MouseButton1Click:Connect(function()
     for _,file in ipairs(listfiles("tracks")) do
         local name = file:match(".+/([^/]+)%.lua$")
         local b = addButton(body,name,y)
-        y += 50
+        local del = addButton(body,"❌",y)
+        del.Size = UDim2.fromOffset(50,38)
+        del.Position = UDim2.fromOffset(310,y)
+        del.MouseButton1Click:Connect(function()
+            delfile(file)
+            b:Destroy()
+            del:Destroy()
+            toast("Track "..name.." dihapus")
+        end)
         b.MouseButton1Click:Connect(function() nameBox.Text = name; toast("Track "..name.." dipilih") end)
+        y += 50
     end
     body.CanvasSize = UDim2.new(0,0,0,y+50)
 end)
