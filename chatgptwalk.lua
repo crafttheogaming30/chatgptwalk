@@ -1,7 +1,7 @@
 --[[ 
- AUTO WALK TRACK SYSTEM - HP READY v3
+ AUTO WALK TRACK SYSTEM - HP READY v4
  Theme : Dark Blue
- UI     : Scrollable, Draggable, Modular, History, Speed Control
+ UI     : Scrollable, Draggable, Modular, History, Speed Control Fixed
  Author : ChatGPT + Teyoo Fix
 ]]--
 
@@ -115,8 +115,8 @@ local function createPanel(title)
 
     local iconBtn
     minimize.MouseButton1Click:Connect(function()
-        body.Visible = not body.Visible
-        if not body.Visible then
+        if body.Visible then
+            body.Visible = false
             iconBtn = Instance.new("TextButton", game.CoreGui)
             iconBtn.Size = UDim2.fromOffset(120,30)
             iconBtn.Position = UDim2.fromScale(0.05,0.1)
@@ -129,8 +129,9 @@ local function createPanel(title)
                 body.Visible = true
                 iconBtn:Destroy()
             end)
-        elseif iconBtn then
-            iconBtn:Destroy()
+        else
+            body.Visible = true
+            if iconBtn then iconBtn:Destroy() end
         end
     end)
 
@@ -153,7 +154,7 @@ local function addButton(parent,text,y)
     return btn
 end
 
--- CREATE BUTTON LIST
+-- BUTTON LIST
 local buttons, y = {},10
 local buttonNames = {
     "● Record","⏸ Pause","■ Stop Record","💾 Save Track","📂 History","▶ Play Selected","🔁 Loop Track","⏹ Stop Play"
@@ -195,23 +196,23 @@ knob.InputBegan:Connect(function(i)
         moveConn = RunService.RenderStepped:Connect(function()
             local x = math.clamp((UserInputService:GetMouseLocation().X - sliderBg.AbsolutePosition.X)/sliderBg.AbsoluteSize.X,0,1)
             knob.Position = UDim2.new(x,-9,-0.4,0)
-            speed = math.floor(x*100)
+            speed = math.floor(1 + x*49) -- speed min 1x normal, max 50x
         end)
         i.Changed:Connect(function()
             if i.UserInputState == Enum.UserInputState.End then
                 moveConn:Disconnect()
-                toast("Speed : "..speed)
+                toast("Speed : "..speed.."x")
             end
         end)
     end
 end)
 
--- ASSIGN BUTTONS
+-- BUTTON LOGIC
 local recordBtn, pauseBtn, stopBtn, saveBtn, historyBtn, playBtn, loopBtn, stopPlayBtn = unpack(buttons)
 local recordConn, playConn = nil,nil
 local recordData, playing, loopTrack, paused = {}, false,false,false
 
--- RECORD LOGIC
+-- RECORD
 recordBtn.MouseButton1Click:Connect(function()
     if recording then return end
     recording, paused, recordData = true,false,{}
@@ -245,7 +246,7 @@ saveBtn.MouseButton1Click:Connect(function()
     toast("Track disimpan")
 end)
 
--- STOP PLAY LOGIC
+-- STOP PLAY
 stopPlayBtn.MouseButton1Click:Connect(function()
     if playing and playConn then
         playing = false
@@ -254,7 +255,7 @@ stopPlayBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- PLAY LOGIC SESUAI TRACK DAN SPEED
+-- PLAY SELECTED FIX SPEED
 playBtn.MouseButton1Click:Connect(function()
     local fname = nameBox.Text
     if fname=="" then return toast("Pilih track dulu") end
@@ -269,8 +270,8 @@ playBtn.MouseButton1Click:Connect(function()
         if not playing then playConn:Disconnect() return end
         local pos = data[index]
         if pos then
-            hrp.CFrame = hrp.CFrame:Lerp(CFrame.new(pos), dt*(speed/10))
-            index += 1
+            hrp.CFrame = CFrame.new(pos) -- fix speed sesuai slider, physics map ttp ga ganggu
+            index += speed -- lompat sesuai speed (1 normal, >1 lebih cepat)
         else
             if loopTrack then index = 1
             else playing = false; playConn:Disconnect(); toast("Track selesai") end
@@ -284,7 +285,7 @@ loopBtn.MouseButton1Click:Connect(function()
     toast(loopTrack and "Loop: ON" or "Loop: OFF")
 end)
 
--- HISTORY PANEL DRAGGABLE + SCROLLABLE + HAPUS TRACK
+-- HISTORY PANEL
 historyBtn.MouseButton1Click:Connect(function()
     local histGui = Instance.new("ScreenGui",game.CoreGui)
     histGui.Name = "AutoWalkHistory_"..math.random(1000,9999)
@@ -307,7 +308,6 @@ historyBtn.MouseButton1Click:Connect(function()
     closeBtn.TextColor3 = THEME.text
     closeBtn.BackgroundTransparency = 1
     closeBtn.MouseButton1Click:Connect(function() histGui:Destroy() end)
-
     local body = Instance.new("ScrollingFrame",panel)
     body.Size = UDim2.new(1,-10,1,-36)
     body.Position = UDim2.fromOffset(5,36)
@@ -335,9 +335,7 @@ historyBtn.MouseButton1Click:Connect(function()
     body.CanvasSize = UDim2.new(0,0,0,y+50)
 end)
 
-------------------------------------------------
--- [CUSTOM FEATURES] <- Tambah kode fitur baru di bawah sini
-------------------------------------------------
+--[CUSTOM FEATURES] <- Tambah kode fitur baru di bawah sini
 -- Contoh:
 -- local myBtn = addButton(body,"Fitur Baru")
 -- myBtn.MouseButton1Click:Connect(function()
