@@ -1,5 +1,5 @@
 --[[ 
- AUTO WALK TRACK SYSTEM - HP READY v6
+ AUTO WALK TRACK SYSTEM - HP READY v6 FULL
  Theme : Dark Blue
  UI     : Scrollable, Draggable, Modular, History, Speed Control +/-, Minimize Logo Theo Ganteng
  Author : ChatGPT + Teyoo Fix
@@ -10,7 +10,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local StarterGui = game:GetService("StarterGui")
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
@@ -32,7 +31,7 @@ local THEME = {
     text    = Color3.fromRGB(230,235,255)
 }
 
--- TOAST
+-- TOAST FUNCTION
 local function toast(text)
     local gui = Instance.new("ScreenGui", game.CoreGui)
     gui.Name = "Toast"
@@ -62,39 +61,39 @@ local function createPanel(title)
     local gui = Instance.new("ScreenGui", game.CoreGui)
     gui.Name = "AutoWalkPro_"..math.random(1000,9999)
     local panel = Instance.new("Frame", gui)
-    panel.Size = UDim2.fromOffset(360,400)
+    panel.Size = UDim2.fromOffset(300,350)
     panel.Position = UDim2.fromScale(0.05,0.2)
     panel.BackgroundColor3 = THEME.panel
     panel.Active = true
     panel.Draggable = true
-    Instance.new("UICorner", panel).CornerRadius = UDim.new(0,18)
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0,12)
 
     local header = Instance.new("Frame", panel)
-    header.Size = UDim2.new(1,0,0,36)
+    header.Size = UDim2.new(1,0,0,30)
     header.BackgroundColor3 = THEME.header
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0,18)
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0,12)
 
     local titleLbl = Instance.new("TextLabel", header)
-    titleLbl.Size = UDim2.new(0.6,0,1,0)
+    titleLbl.Size = UDim2.new(0.7,0,1,0)
     titleLbl.Position = UDim2.fromScale(0.05,0)
     titleLbl.Text = title
     titleLbl.Font = Enum.Font.GothamBold
-    titleLbl.TextSize = 15
+    titleLbl.TextSize = 14
     titleLbl.TextColor3 = THEME.text
     titleLbl.BackgroundTransparency = 1
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local minimize = Instance.new("TextButton", header)
-    minimize.Size = UDim2.new(0,32,1,0)
-    minimize.Position = UDim2.new(0.85,0,0,0)
+    minimize.Size = UDim2.new(0,28,1,0)
+    minimize.Position = UDim2.new(0.8,0,0,0)
     minimize.Text = "—"
     minimize.Font = Enum.Font.GothamBold
     minimize.TextColor3 = THEME.text
     minimize.BackgroundTransparency = 1
 
     local close = Instance.new("TextButton", header)
-    close.Size = UDim2.new(0,32,1,0)
-    close.Position = UDim2.new(1,-32,0,0)
+    close.Size = UDim2.new(0,28,1,0)
+    close.Position = UDim2.new(1,-28,0,0)
     close.Text = "✕"
     close.Font = Enum.Font.GothamBold
     close.TextColor3 = THEME.text
@@ -105,44 +104,43 @@ local function createPanel(title)
     end)
 
     local body = Instance.new("ScrollingFrame", panel)
-    body.Size = UDim2.new(1,-10,1,-36)
-    body.Position = UDim2.fromOffset(5,36)
+    body.Size = UDim2.new(1,-10,1,-30)
+    body.Position = UDim2.fromOffset(5,30)
     body.BackgroundTransparency = 1
     body.CanvasSize = UDim2.new(0,0,0,0)
     body.ScrollBarThickness = 10
     body.ScrollingDirection = Enum.ScrollingDirection.Y
     body.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-    -- MINIMIZE LOGO FIX
+    -- MINIMIZE FUNCTION
     local iconBtn
+    local dragging = false
+    local dragOffset = Vector2.new()
     minimize.MouseButton1Click:Connect(function()
         if panel.Visible then
             panel.Visible = false
             iconBtn = Instance.new("TextButton", game.CoreGui)
-            iconBtn.Size = UDim2.fromOffset(120,30)
+            iconBtn.Size = UDim2.fromOffset(150,30)
             iconBtn.Position = UDim2.fromScale(0.05,0.1)
             iconBtn.Text = "THEO GANTENG"
             iconBtn.Font = Enum.Font.GothamBold
             iconBtn.TextColor3 = Color3.fromRGB(255,255,255)
             iconBtn.BackgroundColor3 = THEME.panel
             Instance.new("UICorner", iconBtn).CornerRadius = UDim.new(0,12)
-            -- DRAG
-            local dragging, dragInput, dragStart, startPos = false,nil, nil, nil
+            -- Dragging icon
             iconBtn.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
                     dragging = true
-                    dragStart = input.Position
-                    startPos = iconBtn.Position
-                    input.Changed:Connect(function()
-                        if input.UserInputState == Enum.UserInputState.End then dragging = false end
-                    end)
+                    dragOffset = input.Position - iconBtn.AbsolutePosition
                 end
             end)
             iconBtn.InputChanged:Connect(function(input)
-                if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                    local delta = input.Position - dragStart
-                    iconBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+                    iconBtn.Position = UDim2.fromOffset(input.Position.X - dragOffset.X,input.Position.Y - dragOffset.Y)
                 end
+            end)
+            iconBtn.InputEnded:Connect(function(input)
+                dragging = false
             end)
             iconBtn.MouseButton1Click:Connect(function()
                 panel.Visible = true
@@ -156,48 +154,92 @@ end
 
 local mainGui, body = createPanel("Auto Walk Track Pro HP")
 
--- BUTTON HELPER
+-- FUNCTION TO ADD BUTTON
 local function addButton(parent,text,y)
     local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.fromOffset(300,38)
-    btn.Position = UDim2.fromOffset(30,y)
+    btn.Size = UDim2.fromOffset(250,30)
+    btn.Position = UDim2.fromOffset(20,y)
     btn.Text = text
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 14
+    btn.TextSize = 12
     btn.TextColor3 = THEME.text
     btn.BackgroundColor3 = THEME.header
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,12)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
     return btn
 end
 
--- SPEED + / -
-local speedInc = Instance.new("TextButton", body)
-speedInc.Size = UDim2.fromOffset(40,30)
-speedInc.Position = UDim2.fromOffset(30, 360)
-speedInc.Text = "+"
-speedInc.Font = Enum.Font.GothamBold
-speedInc.TextColor3 = THEME.text
-speedInc.BackgroundColor3 = THEME.header
-Instance.new("UICorner", speedInc).CornerRadius = UDim.new(0,6)
+-- CREATE MAIN BUTTONS
+local buttons, y = {},10
+local buttonNames = {"● Record","⏸ Pause","💾 Save Track","📂 History","▶ Play Selected","🔁 Loop Track","⏹ Stop Play"}
+for _,name in ipairs(buttonNames) do
+    local b = addButton(body,name,y)
+    table.insert(buttons,b)
+    y += 45
+end
+body.CanvasSize = UDim2.new(0,0,0,y+50)
 
-local speedDec = Instance.new("TextButton", body)
-speedDec.Size = UDim2.fromOffset(40,30)
-speedDec.Position = UDim2.fromOffset(80, 360)
-speedDec.Text = "-"
-speedDec.Font = Enum.Font.GothamBold
-speedDec.TextColor3 = THEME.text
-speedDec.BackgroundColor3 = THEME.header
-Instance.new("UICorner", speedDec).CornerRadius = UDim.new(0,6)
+-- TRACK NAME BOX
+local nameBox = Instance.new("TextBox", body)
+nameBox.Size = UDim2.fromOffset(250,30)
+nameBox.Position = UDim2.fromOffset(20,y)
+nameBox.PlaceholderText = "Nama Track"
+nameBox.Font = Enum.Font.Gotham
+nameBox.TextColor3 = THEME.text
+nameBox.BackgroundColor3 = THEME.header
+Instance.new("UICorner", nameBox).CornerRadius = UDim.new(0,10)
+y += 45
+body.CanvasSize = UDim2.new(0,0,0,y+50)
 
-speedInc.MouseButton1Click:Connect(function()
-    speed += 1
-    toast("Speed "..speed.."x")
+-- SPEED SLIDER
+local sliderBg = Instance.new("Frame", body)
+sliderBg.Size = UDim2.fromOffset(250,10)
+sliderBg.Position = UDim2.fromOffset(20,y)
+sliderBg.BackgroundColor3 = THEME.header
+Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(0,5)
+local knob = Instance.new("Frame", sliderBg)
+knob.Size = UDim2.fromOffset(16,16)
+knob.Position = UDim2.new(speed/50, -8, -0.3, 0)
+knob.BackgroundColor3 = THEME.accent
+Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
+
+-- SPEED +/- BUTTONS
+local plusBtn = addButton(body,"+",y+15)
+local minusBtn = addButton(body,"-",y+15)
+plusBtn.Size = UDim2.fromOffset(40,25)
+plusBtn.Position = UDim2.fromOffset(200,y+15)
+minusBtn.Size = UDim2.fromOffset(40,25)
+minusBtn.Position = UDim2.fromOffset(150,y+15)
+
+plusBtn.MouseButton1Click:Connect(function()
+    speed = math.min(speed+1,50)
+    knob.Position = UDim2.new(speed/50, -8, -0.3, 0)
 end)
-speedDec.MouseButton1Click:Connect(function()
-    speed -= 1
-    if speed<1 then speed=1 end
-    toast("Speed "..speed.."x")
+minusBtn.MouseButton1Click:Connect(function()
+    speed = math.max(speed-1,1)
+    knob.Position = UDim2.new(speed/50, -8, -0.3, 0)
+end)
+
+-- SLIDER INPUT
+knob.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+        local moveConn
+        moveConn = RunService.RenderStepped:Connect(function()
+            local x = math.clamp((UserInputService:GetMouseLocation().X - sliderBg.AbsolutePosition.X)/sliderBg.AbsoluteSize.X,0,1)
+            knob.Position = UDim2.new(x,-8,-0.3,0)
+            speed = math.floor(1 + x*49)
+        end)
+        i.Changed:Connect(function()
+            if i.UserInputState == Enum.UserInputState.End then
+                moveConn:Disconnect()
+                toast("Speed : "..speed.."x")
+            end
+        end)
+    end
 end)
 
 --[CUSTOM FEATURES] <- Tambah kode fitur baru di bawah sini
--- tinggal tambahin tombol/fungsi baru, panel scrollable tetep rapi
+-- Contoh: 
+-- local myBtn = addButton(body,\"Fitur Baru\")
+-- myBtn.MouseButton1Click:Connect(function()
+--     print(\"Fitur baru jalan!\")
+-- end)
