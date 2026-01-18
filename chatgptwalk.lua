@@ -1,7 +1,7 @@
 --[[ 
  AUTO WALK TRACK SYSTEM - HP READY v6
  Theme : Dark Blue
- UI     : Scrollable, Draggable, Modular, History, Speed Control +/-, Minimize Icon
+ UI     : Scrollable, Draggable, Modular, History, Speed Control +/-, Minimize Logo Theo Ganteng
  Author : ChatGPT + Teyoo Fix
 ]]--
 
@@ -62,30 +62,30 @@ local function createPanel(title)
     local gui = Instance.new("ScreenGui", game.CoreGui)
     gui.Name = "AutoWalkPro_"..math.random(1000,9999)
     local panel = Instance.new("Frame", gui)
-    panel.Size = UDim2.fromOffset(300,350)
+    panel.Size = UDim2.fromOffset(360,400)
     panel.Position = UDim2.fromScale(0.05,0.2)
     panel.BackgroundColor3 = THEME.panel
     panel.Active = true
     panel.Draggable = true
-    Instance.new("UICorner", panel).CornerRadius = UDim.new(0,16)
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0,18)
 
     local header = Instance.new("Frame", panel)
-    header.Size = UDim2.new(1,0,0,30)
+    header.Size = UDim2.new(1,0,0,36)
     header.BackgroundColor3 = THEME.header
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0,16)
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0,18)
 
     local titleLbl = Instance.new("TextLabel", header)
     titleLbl.Size = UDim2.new(0.6,0,1,0)
     titleLbl.Position = UDim2.fromScale(0.05,0)
     titleLbl.Text = title
     titleLbl.Font = Enum.Font.GothamBold
-    titleLbl.TextSize = 14
+    titleLbl.TextSize = 15
     titleLbl.TextColor3 = THEME.text
     titleLbl.BackgroundTransparency = 1
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local minimize = Instance.new("TextButton", header)
-    minimize.Size = UDim2.new(0,28,1,0)
+    minimize.Size = UDim2.new(0,32,1,0)
     minimize.Position = UDim2.new(0.85,0,0,0)
     minimize.Text = "—"
     minimize.Font = Enum.Font.GothamBold
@@ -93,8 +93,8 @@ local function createPanel(title)
     minimize.BackgroundTransparency = 1
 
     local close = Instance.new("TextButton", header)
-    close.Size = UDim2.new(0,28,1,0)
-    close.Position = UDim2.new(1,-28,0,0)
+    close.Size = UDim2.new(0,32,1,0)
+    close.Position = UDim2.new(1,-32,0,0)
     close.Text = "✕"
     close.Font = Enum.Font.GothamBold
     close.TextColor3 = THEME.text
@@ -105,50 +105,49 @@ local function createPanel(title)
     end)
 
     local body = Instance.new("ScrollingFrame", panel)
-    body.Size = UDim2.new(1,-10,1,-30)
-    body.Position = UDim2.fromOffset(5,30)
+    body.Size = UDim2.new(1,-10,1,-36)
+    body.Position = UDim2.fromOffset(5,36)
     body.BackgroundTransparency = 1
+    body.CanvasSize = UDim2.new(0,0,0,0)
+    body.ScrollBarThickness = 10
     body.ScrollingDirection = Enum.ScrollingDirection.Y
     body.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    body.ScrollBarThickness = 10
 
+    -- MINIMIZE LOGO FIX
     local iconBtn
     minimize.MouseButton1Click:Connect(function()
-        if body.Visible then
-            body.Visible = false
+        if panel.Visible then
+            panel.Visible = false
             iconBtn = Instance.new("TextButton", game.CoreGui)
-            iconBtn.Size = UDim2.fromOffset(120,28)
+            iconBtn.Size = UDim2.fromOffset(120,30)
             iconBtn.Position = UDim2.fromScale(0.05,0.1)
-            iconBtn.Text = "Theo Ganteng"
+            iconBtn.Text = "THEO GANTENG"
             iconBtn.Font = Enum.Font.GothamBold
-            iconBtn.TextColor3 = THEME.text
+            iconBtn.TextColor3 = Color3.fromRGB(255,255,255)
             iconBtn.BackgroundColor3 = THEME.panel
             Instance.new("UICorner", iconBtn).CornerRadius = UDim.new(0,12)
-            -- drag icon
-            local dragging = false
-            local dragOffset
+            -- DRAG
+            local dragging, dragInput, dragStart, startPos = false,nil, nil, nil
             iconBtn.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = true
-                    dragOffset = input.Position - iconBtn.AbsolutePosition
+                    dragStart = input.Position
+                    startPos = iconBtn.Position
+                    input.Changed:Connect(function()
+                        if input.UserInputState == Enum.UserInputState.End then dragging = false end
+                    end)
                 end
             end)
             iconBtn.InputChanged:Connect(function(input)
-                if dragging then
-                    iconBtn.Position = UDim2.new(0, input.Position.X - dragOffset.X, 0, input.Position.Y - dragOffset.Y)
+                if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                    local delta = input.Position - dragStart
+                    iconBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
                 end
             end)
-            iconBtn.InputEnded:Connect(function(input)
-                dragging = false
-            end)
-
             iconBtn.MouseButton1Click:Connect(function()
-                body.Visible = true
+                panel.Visible = true
                 iconBtn:Destroy()
             end)
-        else
-            body.Visible = true
-            if iconBtn then iconBtn:Destroy() end
         end
     end)
 
@@ -160,216 +159,45 @@ local mainGui, body = createPanel("Auto Walk Track Pro HP")
 -- BUTTON HELPER
 local function addButton(parent,text,y)
     local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.fromOffset(250,32)
-    btn.Position = UDim2.fromOffset(20,y)
+    btn.Size = UDim2.fromOffset(300,38)
+    btn.Position = UDim2.fromOffset(30,y)
     btn.Text = text
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 13
+    btn.TextSize = 14
     btn.TextColor3 = THEME.text
     btn.BackgroundColor3 = THEME.header
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,12)
     return btn
 end
 
--- TRACK NAME BOX
-local nameBox = Instance.new("TextBox", body)
-nameBox.Size = UDim2.fromOffset(250,28)
-nameBox.Position = UDim2.fromOffset(20,10)
-nameBox.PlaceholderText = "Nama Track"
-nameBox.Font = Enum.Font.Gotham
-nameBox.TextColor3 = THEME.text
-nameBox.BackgroundColor3 = THEME.header
-Instance.new("UICorner", nameBox).CornerRadius = UDim.new(0,10)
+-- SPEED + / -
+local speedInc = Instance.new("TextButton", body)
+speedInc.Size = UDim2.fromOffset(40,30)
+speedInc.Position = UDim2.fromOffset(30, 360)
+speedInc.Text = "+"
+speedInc.Font = Enum.Font.GothamBold
+speedInc.TextColor3 = THEME.text
+speedInc.BackgroundColor3 = THEME.header
+Instance.new("UICorner", speedInc).CornerRadius = UDim.new(0,6)
 
-local y = 50
--- SPEED SLIDER + +/-
-local sliderBg = Instance.new("Frame", body)
-sliderBg.Size = UDim2.fromOffset(250,8)
-sliderBg.Position = UDim2.fromOffset(20,y)
-sliderBg.BackgroundColor3 = THEME.header
-Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(0,4)
-local knob = Instance.new("Frame", sliderBg)
-knob.Size = UDim2.fromOffset(16,16)
-knob.Position = UDim2.new(speed/50, -8, -0.4,0)
-knob.BackgroundColor3 = THEME.accent
-Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
+local speedDec = Instance.new("TextButton", body)
+speedDec.Size = UDim2.fromOffset(40,30)
+speedDec.Position = UDim2.fromOffset(80, 360)
+speedDec.Text = "-"
+speedDec.Font = Enum.Font.GothamBold
+speedDec.TextColor3 = THEME.text
+speedDec.BackgroundColor3 = THEME.header
+Instance.new("UICorner", speedDec).CornerRadius = UDim.new(0,6)
 
-local function updateSpeed(x)
-    speed = math.clamp(x,1,50)
-    knob.Position = UDim2.new(speed/50,-8,-0.4,0)
+speedInc.MouseButton1Click:Connect(function()
+    speed += 1
     toast("Speed "..speed.."x")
-end
-
--- slider drag
-knob.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
-        local moveConn
-        moveConn = RunService.RenderStepped:Connect(function()
-            local mouseX = UserInputService:GetMouseLocation().X
-            local rel = math.clamp((mouseX - sliderBg.AbsolutePosition.X)/sliderBg.AbsoluteSize.X,0,1)
-            updateSpeed(rel*50)
-        end)
-        i.Changed:Connect(function()
-            if i.UserInputState==Enum.UserInputState.End then moveConn:Disconnect() end
-        end)
-    end
 end)
-
-y+=20
--- + / - buttons
-local plusBtn = addButton(body,"+",y)
-plusBtn.Size = UDim2.fromOffset(50,28)
-plusBtn.Position = UDim2.fromOffset(20,y)
-plusBtn.MouseButton1Click:Connect(function()
-    updateSpeed(speed+1)
-end)
-local minusBtn = addButton(body,"-",y)
-minusBtn.Size = UDim2.fromOffset(50,28)
-minusBtn.Position = UDim2.fromOffset(80,y)
-minusBtn.MouseButton1Click:Connect(function()
-    updateSpeed(speed-1)
-end)
-
-y+=50
-
--- BUTTONS
-local buttons = {}
-local buttonNames = {"● Record","⏸ Pause","💾 Save Track","📂 History","▶ Play Selected","🔁 Loop Track","⏹ Stop Play"}
-for _,name in ipairs(buttonNames) do
-    local b = addButton(body,name,y)
-    buttons[name] = b
-    y+=40
-end
-body.CanvasSize = UDim2.new(0,0,0,y+20)
-
--- STATES
-local recordConn, playConn = nil,nil
-local recordData, playing, loopTrack, paused = {}, false,false,false
-
--- RECORD
-buttons["● Record"].MouseButton1Click:Connect(function()
-    if recording then
-        recording=false
-        if recordConn then recordConn:Disconnect() end
-        toast("Record Stopped")
-        -- save otomatis
-        local fname = (nameBox.Text~="" and nameBox.Text or "Track")..".lua"
-        local data = "return {\n"
-        for _,p in ipairs(recordData) do
-            data ..= string.format("Vector3.new(%f,%f,%f),\n",p.X,p.Y,p.Z)
-        end
-        data ..= "}"
-        writefile("tracks/"..fname,data)
-        toast("Track "..fname.." disimpan")
-        recordData = {}
-    else
-        recording=true
-        paused=false
-        recordData={}
-        recordConn = RunService.RenderStepped:Connect(function()
-            if recording and not paused then
-                table.insert(recordData,hrp.Position)
-            end
-        end)
-        toast("Record ON")
-    end
-end)
-
--- PAUSE
-buttons["⏸ Pause"].MouseButton1Click:Connect(function()
-    if not recording then return end
-    paused = not paused
-    toast(paused and "Recording Pause" or "Recording Continue")
-end)
-
--- LOOP
-buttons["🔁 Loop Track"].MouseButton1Click:Connect(function()
-    loopTrack = not loopTrack
-    buttons["🔁 Loop Track"].Text = "🔁 Loop Track : "..(loopTrack and "ON" or "OFF")
-    toast("Loop "..(loopTrack and "ON" or "OFF"))
-end)
-
--- STOP PLAY
-buttons["⏹ Stop Play"].MouseButton1Click:Connect(function()
-    if playing and playConn then
-        playing=false
-        playConn:Disconnect()
-        toast("Play Stopped")
-    end
-end)
-
--- PLAY SELECTED WITH SPEED AND ANIMATION
-buttons["▶ Play Selected"].MouseButton1Click:Connect(function()
-    local fname = nameBox.Text
-    if fname=="" then return toast("Pilih track dulu") end
-    local path = "tracks/"..fname
-    if not path:find(".lua") then path = path..".lua" end
-    if not pcall(function() return readfile(path) end) then return toast("Track tidak ada") end
-    local success,data = pcall(function() return loadfile(path)() end)
-    if not success then return toast("Gagal load track") end
-    if playing and playConn then playConn:Disconnect() end
-    playing=true
-    local index=1
-    playConn=RunService.RenderStepped:Connect(function(dt)
-        if not playing then playConn:Disconnect() return end
-        local pos = data[math.floor(index)]
-        if pos then
-            hrp.CFrame = CFrame.new(pos)
-            index += speed/5 -- detail speed
-        else
-            if loopTrack then index=1
-            else playing=false; playConn:Disconnect(); toast("Track selesai") end
-        end
-    end)
-end)
-
--- HISTORY PANEL
-buttons["📂 History"].MouseButton1Click:Connect(function()
-    local histGui = Instance.new("ScreenGui",game.CoreGui)
-    histGui.Name="AutoWalkHistory_"..math.random(1000,9999)
-    local panel = Instance.new("Frame",histGui)
-    panel.Size=UDim2.fromOffset(300,350)
-    panel.Position=UDim2.fromScale(0.05,0.2)
-    panel.BackgroundColor3=THEME.panel
-    panel.Active=true
-    panel.Draggable=true
-    Instance.new("UICorner",panel).CornerRadius=UDim.new(0,16)
-    local header=Instance.new("Frame",panel)
-    header.Size=UDim2.new(1,0,0,28)
-    header.BackgroundColor3=THEME.header
-    Instance.new("UICorner",header).CornerRadius=UDim.new(0,16)
-    local closeBtn=Instance.new("TextButton",header)
-    closeBtn.Size=UDim2.new(0,28,1,0)
-    closeBtn.Position=UDim2.new(1,-28,0,0)
-    closeBtn.Text="✕"
-    closeBtn.Font=Enum.Font.GothamBold
-    closeBtn.TextColor3=THEME.text
-    closeBtn.BackgroundTransparency=1
-    closeBtn.MouseButton1Click:Connect(function() histGui:Destroy() end)
-    local body=Instance.new("ScrollingFrame",panel)
-    body.Size=UDim2.new(1,-10,1,-28)
-    body.Position=UDim2.fromOffset(5,28)
-    body.BackgroundTransparency=1
-    body.ScrollingDirection=Enum.ScrollingDirection.Y
-    body.AutomaticCanvasSize=Enum.AutomaticSize.Y
-    body.ScrollBarThickness=10
-    local y=10
-    for _,file in ipairs(listfiles("tracks")) do
-        local name=file:match(".+/([^/]+)%.lua$")
-        local b=addButton(body,name,y)
-        local del=addButton(body,"❌",y)
-        del.Size=UDim2.fromOffset(40,28)
-        del.Position=UDim2.fromOffset(260,y)
-        del.MouseButton1Click:Connect(function()
-            delfile(file)
-            b:Destroy()
-            del:Destroy()
-            toast("Track "..name.." dihapus")
-        end)
-        b.MouseButton1Click:Connect(function() nameBox.Text=name; toast("Track "..name.." dipilih") end)
-        y+=35
-    end
-    body.CanvasSize=UDim2.new(0,0,0,y+20)
+speedDec.MouseButton1Click:Connect(function()
+    speed -= 1
+    if speed<1 then speed=1 end
+    toast("Speed "..speed.."x")
 end)
 
 --[CUSTOM FEATURES] <- Tambah kode fitur baru di bawah sini
+-- tinggal tambahin tombol/fungsi baru, panel scrollable tetep rapi
