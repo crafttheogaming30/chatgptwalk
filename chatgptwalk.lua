@@ -1,8 +1,8 @@
 --[[ 
- AUTO WALK TRACK SYSTEM - PRO v2
+ AUTO WALK TRACK SYSTEM - HP FIXED
  Theme : Dark Blue
- UI     : Premium (Rounded, Gotham, Slider)
- Author : Custom Build Fixed
+ UI     : Scrollable, Smooth, HP Friendly
+ Author : ChatGPT + Teyoo Fix
 ]]--
 
 local Players = game:GetService("Players")
@@ -19,6 +19,7 @@ if not isfolder("tracks") then
     makefolder("tracks")
 end
 
+-- STATE
 local recording, paused, playing, loopTrack = false, false, false, false
 local speed = 40
 local recordData, playData, playIndex, recordConn, playConn = {}, {}, 1
@@ -61,19 +62,20 @@ local function toast(text)
     end)
 end
 
--- PANEL BUILDER
-local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "AutoWalkPro"
+-- CREATE PANEL
+local function createPanel(title)
+    local gui = Instance.new("ScreenGui", game.CoreGui)
+    gui.Name = "AutoWalkPro_"..math.random(1000,9999) -- unik tiap buka panel
 
-local function createPanel(title, size, pos)
     local panel = Instance.new("Frame", gui)
-    panel.Size = size
-    panel.Position = pos
+    panel.Size = UDim2.fromOffset(360,400)
+    panel.Position = UDim2.fromScale(0.05,0.2)
     panel.BackgroundColor3 = THEME.panel
     panel.Active = true
     panel.Draggable = true
     Instance.new("UICorner", panel).CornerRadius = UDim.new(0,18)
 
+    -- header
     local header = Instance.new("Frame", panel)
     header.Size = UDim2.new(1,0,0,36)
     header.BackgroundColor3 = THEME.header
@@ -89,14 +91,6 @@ local function createPanel(title, size, pos)
     titleLbl.BackgroundTransparency = 1
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left
 
-    local min = Instance.new("TextButton", header)
-    min.Size = UDim2.new(0,32,1,0)
-    min.Position = UDim2.new(1,-64,0,0)
-    min.Text = "—"
-    min.Font = Enum.Font.GothamBold
-    min.TextColor3 = THEME.text
-    min.BackgroundTransparency = 1
-
     local close = Instance.new("TextButton", header)
     close.Size = UDim2.new(0,32,1,0)
     close.Position = UDim2.new(1,-32,0,0)
@@ -104,63 +98,62 @@ local function createPanel(title, size, pos)
     close.Font = Enum.Font.GothamBold
     close.TextColor3 = THEME.text
     close.BackgroundTransparency = 1
-
-    local body = Instance.new("Frame", panel)
-    body.Position = UDim2.new(0,0,0,36)
-    body.Size = UDim2.new(1,0,1,-36)
-    body.BackgroundTransparency = 1
-
-    min.MouseButton1Click:Connect(function()
-        body.Visible = not body.Visible
-    end)
-
     close.MouseButton1Click:Connect(function()
-        panel.Visible = false
+        gui:Destroy()
         toast("Panel ditutup")
     end)
 
-    return panel, body
+    -- scrollable body
+    local body = Instance.new("ScrollingFrame", panel)
+    body.Size = UDim2.new(1,-10,1,-36)
+    body.Position = UDim2.fromOffset(5,36)
+    body.CanvasSize = UDim2.new(0,0,0,0)
+    body.ScrollBarThickness = 10
+    body.BackgroundTransparency = 1
+
+    return gui, body
 end
 
-local main, body = createPanel("Auto Walk Track Pro", UDim2.fromOffset(360,450), UDim2.fromScale(0.05,0.2))
+local mainGui, body = createPanel("Auto Walk Track Pro HP")
 
 -- BUTTON HELPER
-local function button(text, y)
-    local b = Instance.new("TextButton", body)
-    b.Size = UDim2.fromOffset(300,38)
-    b.Position = UDim2.fromOffset(30,y)
-    b.Text = text
-    b.Font = Enum.Font.GothamMedium
-    b.TextSize = 14
-    b.TextColor3 = THEME.text
-    b.BackgroundColor3 = THEME.header
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,12)
-    return b
+local function addButton(parent,text,y)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.fromOffset(300,38)
+    btn.Position = UDim2.fromOffset(30,y)
+    btn.Text = text
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 14
+    btn.TextColor3 = THEME.text
+    btn.BackgroundColor3 = THEME.header
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,12)
+    return btn
 end
 
--- RECORD CONTROLS
-local recordBtn = button("● Record",20)
-local pauseBtn  = button("⏸ Pause",70)
-local stopBtn   = button("■ Stop",120)
-
+-- TRACK CONTROLS
+local buttonsY = 10
+local recordBtn = addButton(body,"● Record",buttonsY); buttonsY += 50
+local pauseBtn  = addButton(body,"⏸ Pause",buttonsY); buttonsY += 50
+local stopBtn   = addButton(body,"■ Stop Record",buttonsY); buttonsY += 50
 local nameBox = Instance.new("TextBox", body)
 nameBox.Size = UDim2.fromOffset(300,36)
-nameBox.Position = UDim2.fromOffset(30,175)
-nameBox.PlaceholderText = "Nama track"
+nameBox.Position = UDim2.fromOffset(30,buttonsY); buttonsY += 50
+nameBox.PlaceholderText = "Nama Track"
 nameBox.Font = Enum.Font.Gotham
 nameBox.TextColor3 = THEME.text
 nameBox.BackgroundColor3 = THEME.header
 Instance.new("UICorner", nameBox).CornerRadius = UDim.new(0,12)
 
-local saveBtn = button("💾 Save Track",225)
-local historyBtn = button("📂 History",275)
-local playBtn = button("▶ Play Selected",325)
-local loopBtn = button("🔁 Loop Track",370)
+local saveBtn = addButton(body,"💾 Save Track",buttonsY); buttonsY += 50
+local historyBtn = addButton(body,"📂 History",buttonsY); buttonsY += 50
+local playBtn = addButton(body,"▶ Play Selected",buttonsY); buttonsY += 50
+local loopBtn = addButton(body,"🔁 Loop Track",buttonsY); buttonsY += 50
+local stopPlayBtn = addButton(body,"⏹ Stop Play",buttonsY); buttonsY += 50 -- tombol stop play
 
--- SPEED SLIDER
+-- SLIDER
 local sliderBg = Instance.new("Frame", body)
 sliderBg.Size = UDim2.fromOffset(300,10)
-sliderBg.Position = UDim2.fromOffset(30,410)
+sliderBg.Position = UDim2.fromOffset(30,buttonsY); buttonsY += 50
 sliderBg.BackgroundColor3 = THEME.header
 Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(0,6)
 
@@ -174,10 +167,7 @@ knob.InputBegan:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then
         local moveConn
         moveConn = RunService.RenderStepped:Connect(function()
-            local x = math.clamp(
-                (UserInputService:GetMouseLocation().X - sliderBg.AbsolutePosition.X)
-                / sliderBg.AbsoluteSize.X, 0,1
-            )
+            local x = math.clamp((UserInputService:GetMouseLocation().X - sliderBg.AbsolutePosition.X)/sliderBg.AbsoluteSize.X,0,1)
             knob.Position = UDim2.new(x,-9,-0.4,0)
             speed = math.floor(x*100)
         end)
@@ -193,10 +183,7 @@ end)
 -- RECORD LOGIC
 recordBtn.MouseButton1Click:Connect(function()
     if recording then return end
-    recording = true
-    paused = false
-    recordData = {}
-
+    recording, paused, recordData = true, false, {}
     recordConn = RunService.RenderStepped:Connect(function()
         if recording and not paused then
             table.insert(recordData, hrp.Position)
@@ -228,10 +215,10 @@ saveBtn.MouseButton1Click:Connect(function()
     toast("Track "..nameBox.Text.." disimpan")
 end)
 
--- HISTORY LOGIC
+-- HISTORY
 local historyList = Instance.new("ScrollingFrame", body)
-historyList.Size = UDim2.fromOffset(300,80)
-historyList.Position = UDim2.fromOffset(30,410)
+historyList.Size = UDim2.fromOffset(300,150)
+historyList.Position = UDim2.fromOffset(30,buttonsY); buttonsY += 160
 historyList.BackgroundColor3 = THEME.bg
 Instance.new("UICorner", historyList).CornerRadius = UDim.new(0,10)
 historyList.Visible = false
@@ -262,19 +249,28 @@ historyBtn.MouseButton1Click:Connect(function()
     historyList.Visible = not historyList.Visible
 end)
 
--- LOOP TOGGLE
+-- LOOP
 loopBtn.MouseButton1Click:Connect(function()
     loopTrack = not loopTrack
     toast(loopTrack and "Loop: ON" or "Loop: OFF")
 end)
 
--- PLAY FUNCTION
+-- STOP PLAY LOGIC
+stopPlayBtn.MouseButton1Click:Connect(function()
+    if playing and playConn then
+        playing = false
+        playConn:Disconnect()
+        toast("Play track dihentikan")
+    end
+end)
+
+-- PLAY
 playBtn.MouseButton1Click:Connect(function()
     if not selectedTrack then return toast("Pilih track dulu") end
     local success, data = pcall(function() return loadfile(selectedTrack)() end)
     if not success then return toast("Gagal load track") end
 
-    if playing then playConn:Disconnect() end
+    if playing and playConn then playConn:Disconnect() end
     playing = true
     playIndex = 1
 
