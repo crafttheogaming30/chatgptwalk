@@ -1,5 +1,6 @@
 -- AUTO WALK + FLY PRO HP
--- FINAL BUILD (CUSTOM PANEL NOTIFY + SAVE NAME TRACK)
+-- FULL FINAL MERGED BUILD
+-- UI SAFE | PANEL NOTIFY | SAVE NAME | HISTORY | SPEED | LOOP | FLY
 
 ---------------- SERVICES ----------------
 local Players = game:GetService("Players")
@@ -148,6 +149,10 @@ local recPause = makeBtn(body,"⏸ Pause Record")
 local recStop  = makeBtn(body,"⏹ Stop & Save Record")
 local playBtn  = makeBtn(body,"▶ Play AutoWalk")
 local stopBtn  = makeBtn(body,"⏹ Stop AutoWalk")
+local loopBtn  = makeBtn(body,"🔁 Loop : OFF")
+local speedBtn = makeBtn(body,"⚙ Speed AutoWalk")
+local histBtn  = makeBtn(body,"📂 History Track")
+local flyBtn   = makeBtn(body,"🕊 Fly")
 
 ---------------- RECORD ----------------
 recStart.MouseButton1Click:Connect(function()
@@ -228,11 +233,15 @@ playBtn.MouseButton1Click:Connect(function()
 			bg.CFrame = CFrame.new(root.Position, root.Position + dir)
 			playIndex += walkSpeed/10
 		else
-			playing = false
-			bv:Destroy()
-			bg:Destroy()
-			conn:Disconnect()
-			panelNotify("AutoWalk selesai")
+			if loopPlay then
+				playIndex = 1
+			else
+				playing = false
+				bv:Destroy()
+				bg:Destroy()
+				conn:Disconnect()
+				panelNotify("AutoWalk selesai")
+			end
 		end
 	end)
 end)
@@ -244,4 +253,111 @@ stopBtn.MouseButton1Click:Connect(function()
 	panelNotify("AutoWalk stop")
 end)
 
-panelNotify("AUTO WALK PRO READY")
+---------------- LOOP ----------------
+local lastLoop = 0
+loopBtn.MouseButton1Click:Connect(function()
+	if tick() - lastLoop < 0.4 then
+		loopPlay = not loopPlay
+		loopBtn.Text = "🔁 Loop : "..(loopPlay and "ON" or "OFF")
+		panelNotify("Loop "..(loopPlay and "ON" or "OFF"))
+	end
+	lastLoop = tick()
+end)
+
+---------------- SPEED PANEL ----------------
+speedBtn.MouseButton1Click:Connect(function()
+	local p,b = createPanel(
+		UDim2.new(0,220,0,160),
+		UDim2.new(0.35,0,0.3,0),
+		"SPEED AUTOWALK"
+	)
+
+	local label = Instance.new("TextLabel",b)
+	label.Size = UDim2.new(1,0,0,30)
+	label.Text = "Speed : "..walkSpeed
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 13
+	label.TextColor3 = Color3.new(1,1,1)
+	label.BackgroundTransparency = 1
+
+	makeBtn(b,"+").MouseButton1Click:Connect(function()
+		walkSpeed = math.clamp(walkSpeed+2,5,100)
+		label.Text = "Speed : "..walkSpeed
+	end)
+
+	makeBtn(b,"-").MouseButton1Click:Connect(function()
+		walkSpeed = math.clamp(walkSpeed-2,5,100)
+		label.Text = "Speed : "..walkSpeed
+	end)
+end)
+
+---------------- HISTORY PANEL ----------------
+histBtn.MouseButton1Click:Connect(function()
+	local p,b = createPanel(
+		UDim2.new(0,260,0,260),
+		UDim2.new(0.4,0,0.25,0),
+		"HISTORY"
+	)
+
+	for _,file in ipairs(listfiles("tracks")) do
+		local play = makeBtn(b,file:match("([^/]+)$"))
+		play.MouseButton1Click:Connect(function()
+			track = loadfile(file)()
+			panelNotify("Track loaded")
+		end)
+
+		local del = makeBtn(b,"Delete")
+		del.BackgroundColor3 = Color3.fromRGB(150,60,60)
+		del.MouseButton1Click:Connect(function()
+			delfile(file)
+			play:Destroy()
+			del:Destroy()
+			panelNotify("Track deleted")
+		end)
+	end
+end)
+
+---------------- FLY PANEL ----------------
+flyBtn.MouseButton1Click:Connect(function()
+	local flying = false
+	local bvf,bgf,flyConn
+
+	local p,b = createPanel(
+		UDim2.new(0,240,0,200),
+		UDim2.new(0.3,0,0.25,0),
+		"FLY"
+	)
+
+	makeBtn(b,"ON / OFF").MouseButton1Click:Connect(function()
+		flying = not flying
+		if flying then
+			bvf = Instance.new("BodyVelocity",root)
+			bgf = Instance.new("BodyGyro",root)
+			bvf.MaxForce = Vector3.new(1e6,1e6,1e6)
+			bgf.MaxTorque = Vector3.new(1e6,1e6,1e6)
+
+			flyConn = RunService.RenderStepped:Connect(function()
+				local move = hum.MoveDirection
+				bvf.Velocity = cam.CFrame.LookVector * move.Magnitude * flySpeed
+				bgf.CFrame = cam.CFrame
+			end)
+
+			panelNotify("Fly ON")
+		else
+			if flyConn then flyConn:Disconnect() end
+			if bvf then bvf:Destroy() end
+			if bgf then bgf:Destroy() end
+			panelNotify("Fly OFF")
+		end
+	end)
+
+	makeBtn(b,"Speed +").MouseButton1Click:Connect(function()
+		flySpeed = math.clamp(flySpeed+10,1,200)
+	end)
+
+	makeBtn(b,"Speed -").MouseButton1Click:Connect(function()
+		flySpeed = math.clamp(flySpeed-10,1,200)
+	end)
+end)
+
+panelNotify("AUTO WALK + FLY PRO READY")
