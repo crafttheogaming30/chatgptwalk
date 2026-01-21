@@ -1,10 +1,12 @@
 -- AUTO WALK + FLY PRO HP
--- FINAL STABLE BUILD (UI FIXED + ALL FEATURES)
+-- FULL FINAL BUILD (NO CUT, NO CORE ONLY)
+-- UI SAFE + FEATURE REAL (NOT DUMMY)
 
 ---------------- SERVICES ----------------
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
@@ -12,8 +14,10 @@ local hum = char:WaitForChild("Humanoid")
 local root = char:WaitForChild("HumanoidRootPart")
 local cam = workspace.CurrentCamera
 
----------------- FILE ----------------
-if not isfolder("tracks") then makefolder("tracks") end
+---------------- FILE SYSTEM ----------------
+if not isfolder("tracks") then
+	makefolder("tracks")
+end
 
 ---------------- STATE ----------------
 local recording = false
@@ -23,15 +27,28 @@ local loopPlay = false
 
 local track = {}
 local playIndex = 1
-local walkSpeed = 20
 
----------------- GUI BASE ----------------
+local walkSpeed = 20
+local flySpeed = 40
+
+---------------- NOTIFICATION ----------------
+local function notify(txt)
+	pcall(function()
+		game:GetService("StarterGui"):SetCore("SendNotification",{
+			Title="AutoWalk Pro",
+			Text=txt,
+			Duration=2
+		})
+	end)
+end
+
+---------------- GUI SAFE ----------------
 local gui = Instance.new("ScreenGui")
 gui.Name = "AutoWalkPro"
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = game:GetService("CoreGui")
 
----------------- PANEL MAKER ----------------
+---------------- PANEL BUILDER ----------------
 local function createPanel(size,pos,titleText)
 	local f = Instance.new("Frame",gui)
 	f.Size = size
@@ -113,7 +130,7 @@ local function makeBtn(parent,text)
 	return b
 end
 
----------------- MAIN PANEL (PENDEK + SCROLL) ----------------
+---------------- MAIN PANEL (SHORT + SCROLL) ----------------
 local main,body = createPanel(
 	UDim2.new(0,280,0,260),
 	UDim2.new(0.05,0,0.2,0),
@@ -126,15 +143,16 @@ local playBtn   = makeBtn(body,"▶ Play AutoWalk")
 local stopBtn   = makeBtn(body,"⏹ Stop Play")
 local loopBtn   = makeBtn(body,"🔁 Loop : OFF")
 local speedBtn  = makeBtn(body,"⚙ Speed AutoWalk")
-local histBtn   = makeBtn(body,"📂 History")
+local histBtn   = makeBtn(body,"📂 History Track")
 local flyBtn    = makeBtn(body,"🕊 Fly")
 
----------------- RECORD ----------------
+---------------- RECORD SYSTEM ----------------
 local lastRecClick = 0
+
 recordBtn.MouseButton1Click:Connect(function()
 	if tick() - lastRecClick < 0.4 then
 		recording = false
-		recordBtn.Text = "● Record / Stop (Double)"
+		notify("Record stopped")
 		local name = "track_"..os.time()..".lua"
 		local data = "return {\n"
 		for _,p in ipairs(track) do
@@ -146,7 +164,7 @@ recordBtn.MouseButton1Click:Connect(function()
 		track = {}
 		recording = true
 		paused = false
-		recordBtn.Text = "● Recording..."
+		notify("Recording started")
 	end
 	lastRecClick = tick()
 end)
@@ -154,7 +172,7 @@ end)
 pauseBtn.MouseButton1Click:Connect(function()
 	if recording then
 		paused = not paused
-		pauseBtn.Text = paused and "▶ Resume Record" or "⏸ Pause Record"
+		notify(paused and "Record paused" or "Record resumed")
 	end
 end)
 
@@ -164,22 +182,39 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
----------------- PLAY ----------------
+---------------- AUTOWALK PLAY (FLOAT SAFE) ----------------
+local bv,bg,playConn
+
 playBtn.MouseButton1Click:Connect(function()
 	if playing or #track < 2 then return end
 	playing = true
 	playIndex = 1
-	RunService.RenderStepped:Connect(function()
+
+	bv = Instance.new("BodyVelocity",root)
+	bg = Instance.new("BodyGyro",root)
+	bv.MaxForce = Vector3.new(1e6,1e6,1e6)
+	bg.MaxTorque = Vector3.new(1e6,1e6,1e6)
+
+	notify("AutoWalk started")
+
+	playConn = RunService.RenderStepped:Connect(function()
 		if not playing then return end
-		local p = track[math.floor(playIndex)]
-		if p then
-			root.CFrame = CFrame.new(p)
+
+		local target = track[math.floor(playIndex)]
+		if target then
+			local dir = (target - root.Position)
+			bv.Velocity = dir.Unit * walkSpeed
+			bg.CFrame = CFrame.new(root.Position, root.Position + dir)
 			playIndex += walkSpeed/10
 		else
 			if loopPlay then
 				playIndex = 1
 			else
 				playing = false
+				bv:Destroy()
+				bg:Destroy()
+				playConn:Disconnect()
+				notify("AutoWalk finished")
 			end
 		end
 	end)
@@ -187,6 +222,9 @@ end)
 
 stopBtn.MouseButton1Click:Connect(function()
 	playing = false
+	if bv then bv:Destroy() end
+	if bg then bg:Destroy() end
+	notify("AutoWalk stopped")
 end)
 
 ---------------- LOOP (DOUBLE CLICK) ----------------
@@ -195,6 +233,7 @@ loopBtn.MouseButton1Click:Connect(function()
 	if tick() - lastLoop < 0.4 then
 		loopPlay = not loopPlay
 		loopBtn.Text = "🔁 Loop : "..(loopPlay and "ON" or "OFF")
+		notify("Loop "..(loopPlay and "ON" or "OFF"))
 	end
 	lastLoop = tick()
 end)
@@ -202,9 +241,9 @@ end)
 ---------------- SPEED PANEL ----------------
 speedBtn.MouseButton1Click:Connect(function()
 	local p,b = createPanel(
-		UDim2.new(0,230,0,160),
+		UDim2.new(0,230,0,180),
 		UDim2.new(0.35,0,0.3,0),
-		"SPEED"
+		"SPEED AUTOWALK"
 	)
 
 	local label = Instance.new("TextLabel",b)
@@ -221,10 +260,12 @@ speedBtn.MouseButton1Click:Connect(function()
 	plus.MouseButton1Click:Connect(function()
 		walkSpeed = math.clamp(walkSpeed+2,5,100)
 		label.Text = "Speed : "..walkSpeed
+		notify("Speed "..walkSpeed)
 	end)
 	minus.MouseButton1Click:Connect(function()
 		walkSpeed = math.clamp(walkSpeed-2,5,100)
 		label.Text = "Speed : "..walkSpeed
+		notify("Speed "..walkSpeed)
 	end)
 end)
 
@@ -240,6 +281,7 @@ histBtn.MouseButton1Click:Connect(function()
 		local play = makeBtn(b,file:match("([^/]+)$"))
 		play.MouseButton1Click:Connect(function()
 			track = loadfile(file)()
+			notify("Track loaded")
 		end)
 
 		local del = makeBtn(b,"Delete")
@@ -248,15 +290,15 @@ histBtn.MouseButton1Click:Connect(function()
 			delfile(file)
 			play:Destroy()
 			del:Destroy()
+			notify("Track deleted")
 		end)
 	end
 end)
 
----------------- FLY PANEL (MANUAL) ----------------
+---------------- FLY PANEL ----------------
 flyBtn.MouseButton1Click:Connect(function()
 	local flying = false
-	local flySpeed = 40
-	local bv,bg,conn
+	local bvf,bgf,conn
 
 	local p,b = createPanel(
 		UDim2.new(0,240,0,200),
@@ -271,29 +313,33 @@ flyBtn.MouseButton1Click:Connect(function()
 	toggle.MouseButton1Click:Connect(function()
 		flying = not flying
 		if flying then
-			bv = Instance.new("BodyVelocity",root)
-			bg = Instance.new("BodyGyro",root)
-			bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-			bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+			bvf = Instance.new("BodyVelocity",root)
+			bgf = Instance.new("BodyGyro",root)
+			bvf.MaxForce = Vector3.new(1e6,1e6,1e6)
+			bgf.MaxTorque = Vector3.new(1e6,1e6,1e6)
+			notify("Fly ON")
 
 			conn = RunService.RenderStepped:Connect(function()
 				local move = hum.MoveDirection
-				bv.Velocity = cam.CFrame.LookVector * move.Magnitude * flySpeed
-				bg.CFrame = cam.CFrame
+				bvf.Velocity = cam.CFrame.LookVector * move.Magnitude * flySpeed
+				bgf.CFrame = cam.CFrame
 			end)
 		else
 			if conn then conn:Disconnect() end
-			if bv then bv:Destroy() end
-			if bg then bg:Destroy() end
+			if bvf then bvf:Destroy() end
+			if bgf then bgf:Destroy() end
+			notify("Fly OFF")
 		end
 	end)
 
 	plus.MouseButton1Click:Connect(function()
-		flySpeed = math.clamp(flySpeed+5,10,200)
+		flySpeed = math.clamp(flySpeed+10,1,200)
+		notify("Fly speed "..flySpeed)
 	end)
 	minus.MouseButton1Click:Connect(function()
-		flySpeed = math.clamp(flySpeed-5,10,200)
+		flySpeed = math.clamp(flySpeed-10,1,200)
+		notify("Fly speed "..flySpeed)
 	end)
 end)
 
-print("AUTO WALK + FLY PRO FINAL LOADED")
+notify("AUTO WALK + FLY PRO LOADED")
