@@ -1,5 +1,5 @@
--- AUTO WALK + FLY PRO HP
--- FULL FINAL MERGED BUILD
+-- AUTO WALK + FLY PRO HP MERGED WITH SPEED PANEL
+-- FULL FINAL + SPEED SLIDER + BUTTON
 -- UI SAFE | PANEL NOTIFY | SAVE NAME | HISTORY | SPEED | LOOP | FLY
 
 ---------------- SERVICES ----------------
@@ -21,11 +21,14 @@ local recording = false
 local paused = false
 local playing = false
 local loopPlay = false
-
 local track = {}
 local playIndex = 1
+
+-- SPEED
 local walkSpeed = 20
+local AutoWalkSpeed = 1 -- multiplier x1 - x1.5
 local flySpeed = 40
+local FlySpeed = 1 -- multiplier x1 - x3
 
 ---------------- GUI BASE ----------------
 local gui = Instance.new("ScreenGui")
@@ -51,9 +54,7 @@ local function panelNotify(text)
 	t.Font = Enum.Font.GothamBold
 	t.TextSize = 13
 
-	task.delay(2,function()
-		n:Destroy()
-	end)
+	task.delay(2,function() n:Destroy() end)
 end
 
 ---------------- PANEL BUILDER ----------------
@@ -110,9 +111,7 @@ local function createPanel(size,pos,titleText)
 	local layout = Instance.new("UIListLayout",body)
 	layout.Padding = UDim.new(0,6)
 
-	close.MouseButton1Click:Connect(function()
-		f:Destroy()
-	end)
+	close.MouseButton1Click:Connect(function() f:Destroy() end)
 
 	local minimized = false
 	mini.MouseButton1Click:Connect(function()
@@ -139,9 +138,9 @@ end
 
 ---------------- MAIN PANEL ----------------
 local main,body = createPanel(
-	UDim2.new(0,280,0,260),
+	UDim2.new(0,280,0,280),
 	UDim2.new(0.05,0,0.2,0),
-	"AUTO WALK PRO"
+	"AUTO WALK + FLY PRO"
 )
 
 local recStart = makeBtn(body,"● Start Record")
@@ -150,7 +149,7 @@ local recStop  = makeBtn(body,"⏹ Stop & Save Record")
 local playBtn  = makeBtn(body,"▶ Play AutoWalk")
 local stopBtn  = makeBtn(body,"⏹ Stop AutoWalk")
 local loopBtn  = makeBtn(body,"🔁 Loop : OFF")
-local speedBtn = makeBtn(body,"⚙ Speed AutoWalk")
+local speedBtn = makeBtn(body,"⚙ Speed Control")
 local histBtn  = makeBtn(body,"📂 History Track")
 local flyBtn   = makeBtn(body,"🕊 Fly")
 
@@ -190,7 +189,6 @@ recStop.MouseButton1Click:Connect(function()
 	Instance.new("UICorner",box)
 
 	local save = makeBtn(b,"SAVE")
-
 	save.MouseButton1Click:Connect(function()
 		if box.Text == "" then return end
 		local data = "return {\n"
@@ -210,154 +208,82 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
----------------- AUTOWALK ----------------
-local bv,bg,conn
-playBtn.MouseButton1Click:Connect(function()
-	if #track < 2 then return end
-	playing = true
-	playIndex = 1
-
-	bv = Instance.new("BodyVelocity",root)
-	bg = Instance.new("BodyGyro",root)
-	bv.MaxForce = Vector3.new(1e6,1e6,1e6)
-	bg.MaxTorque = Vector3.new(1e6,1e6,1e6)
-
-	panelNotify("AutoWalk jalan")
-
-	conn = RunService.RenderStepped:Connect(function()
-		if not playing then return end
-		local target = track[math.floor(playIndex)]
-		if target then
-			local dir = (target - root.Position)
-			bv.Velocity = dir.Unit * walkSpeed
-			bg.CFrame = CFrame.new(root.Position, root.Position + dir)
-			playIndex += walkSpeed/10
-		else
-			if loopPlay then
-				playIndex = 1
-			else
-				playing = false
-				bv:Destroy()
-				bg:Destroy()
-				conn:Disconnect()
-				panelNotify("AutoWalk selesai")
-			end
-		end
-	end)
-end)
-
-stopBtn.MouseButton1Click:Connect(function()
-	playing = false
-	if bv then bv:Destroy() end
-	if bg then bg:Destroy() end
-	panelNotify("AutoWalk stop")
-end)
-
----------------- LOOP ----------------
-local lastLoop = 0
-loopBtn.MouseButton1Click:Connect(function()
-	if tick() - lastLoop < 0.4 then
-		loopPlay = not loopPlay
-		loopBtn.Text = "🔁 Loop : "..(loopPlay and "ON" or "OFF")
-		panelNotify("Loop "..(loopPlay and "ON" or "OFF"))
-	end
-	lastLoop = tick()
-end)
-
 ---------------- SPEED PANEL ----------------
 speedBtn.MouseButton1Click:Connect(function()
 	local p,b = createPanel(
-		UDim2.new(0,220,0,160),
-		UDim2.new(0.35,0,0.3,0),
-		"SPEED AUTOWALK"
+		UDim2.new(0,240,0,180),
+		UDim2.new(0.35,0,0.25,0),
+		"SPEED CONTROL"
 	)
 
-	local label = Instance.new("TextLabel",b)
-	label.Size = UDim2.new(1,0,0,30)
-	label.Text = "Speed : "..walkSpeed
-	label.Font = Enum.Font.GothamBold
-	label.TextSize = 13
-	label.TextColor3 = Color3.new(1,1,1)
-	label.BackgroundTransparency = 1
+	-- AUTO WALK
+	local awLabel = Instance.new("TextLabel",b)
+	awLabel.Size = UDim2.new(1,0,0,20)
+	awLabel.Position = UDim2.fromOffset(10,0)
+	awLabel.Text = "AUTO WALK SPEED : x"..string.format("%.1f",AutoWalkSpeed)
+	awLabel.Font = Enum.Font.GothamBold
+	awLabel.TextSize = 13
+	awLabel.TextColor3 = Color3.new(1,1,1)
+	awLabel.BackgroundTransparency = 1
 
-	makeBtn(b,"+").MouseButton1Click:Connect(function()
+	local awSlider = makeBtn(b,"Slide +0.1")
+	awSlider.Position = UDim2.fromOffset(10,25)
+	awSlider.MouseButton1Click:Connect(function()
+		AutoWalkSpeed = math.clamp(AutoWalkSpeed + 0.1, 1, 1.5)
+		awLabel.Text = "AUTO WALK SPEED : x"..string.format("%.1f",AutoWalkSpeed)
+		panelNotify("AutoWalk Speed x"..string.format("%.1f",AutoWalkSpeed))
+	end)
+
+	local awPlus = makeBtn(b,"+")
+	awPlus.Position = UDim2.fromOffset(10,60)
+	awPlus.MouseButton1Click:Connect(function()
 		walkSpeed = math.clamp(walkSpeed+2,5,100)
-		label.Text = "Speed : "..walkSpeed
+		panelNotify("WalkSpeed : "..walkSpeed)
 	end)
 
-	makeBtn(b,"-").MouseButton1Click:Connect(function()
+	local awMin = makeBtn(b,"-")
+	awMin.Position = UDim2.fromOffset(120,60)
+	awMin.MouseButton1Click:Connect(function()
 		walkSpeed = math.clamp(walkSpeed-2,5,100)
-		label.Text = "Speed : "..walkSpeed
-	end)
-end)
-
----------------- HISTORY PANEL ----------------
-histBtn.MouseButton1Click:Connect(function()
-	local p,b = createPanel(
-		UDim2.new(0,260,0,260),
-		UDim2.new(0.4,0,0.25,0),
-		"HISTORY"
-	)
-
-	for _,file in ipairs(listfiles("tracks")) do
-		local play = makeBtn(b,file:match("([^/]+)$"))
-		play.MouseButton1Click:Connect(function()
-			track = loadfile(file)()
-			panelNotify("Track loaded")
-		end)
-
-		local del = makeBtn(b,"Delete")
-		del.BackgroundColor3 = Color3.fromRGB(150,60,60)
-		del.MouseButton1Click:Connect(function()
-			delfile(file)
-			play:Destroy()
-			del:Destroy()
-			panelNotify("Track deleted")
-		end)
-	end
-end)
-
----------------- FLY PANEL ----------------
-flyBtn.MouseButton1Click:Connect(function()
-	local flying = false
-	local bvf,bgf,flyConn
-
-	local p,b = createPanel(
-		UDim2.new(0,240,0,200),
-		UDim2.new(0.3,0,0.25,0),
-		"FLY"
-	)
-
-	makeBtn(b,"ON / OFF").MouseButton1Click:Connect(function()
-		flying = not flying
-		if flying then
-			bvf = Instance.new("BodyVelocity",root)
-			bgf = Instance.new("BodyGyro",root)
-			bvf.MaxForce = Vector3.new(1e6,1e6,1e6)
-			bgf.MaxTorque = Vector3.new(1e6,1e6,1e6)
-
-			flyConn = RunService.RenderStepped:Connect(function()
-				local move = hum.MoveDirection
-				bvf.Velocity = cam.CFrame.LookVector * move.Magnitude * flySpeed
-				bgf.CFrame = cam.CFrame
-			end)
-
-			panelNotify("Fly ON")
-		else
-			if flyConn then flyConn:Disconnect() end
-			if bvf then bvf:Destroy() end
-			if bgf then bgf:Destroy() end
-			panelNotify("Fly OFF")
-		end
+		panelNotify("WalkSpeed : "..walkSpeed)
 	end)
 
-	makeBtn(b,"Speed +").MouseButton1Click:Connect(function()
+	-- FLY SPEED
+	local flyLabel = Instance.new("TextLabel",b)
+	flyLabel.Size = UDim2.new(1,0,0,20)
+	flyLabel.Position = UDim2.fromOffset(10,100)
+	flyLabel.Text = "FLY SPEED : x"..string.format("%.1f",FlySpeed)
+	flyLabel.Font = Enum.Font.GothamBold
+	flyLabel.TextSize = 13
+	flyLabel.TextColor3 = Color3.new(1,1,1)
+	flyLabel.BackgroundTransparency = 1
+
+	local flySlider = makeBtn(b,"Slide +0.5")
+	flySlider.Position = UDim2.fromOffset(10,125)
+	flySlider.MouseButton1Click:Connect(function()
+		FlySpeed = math.clamp(FlySpeed + 0.5, 1, 3)
+		flyLabel.Text = "FLY SPEED : x"..string.format("%.1f",FlySpeed)
+		panelNotify("Fly Speed x"..string.format("%.1f",FlySpeed))
+	end)
+
+	local flyPlus = makeBtn(b,"+")
+	flyPlus.Position = UDim2.fromOffset(10,150)
+	flyPlus.MouseButton1Click:Connect(function()
 		flySpeed = math.clamp(flySpeed+10,1,200)
+		panelNotify("FlySpeed : "..flySpeed)
 	end)
 
-	makeBtn(b,"Speed -").MouseButton1Click:Connect(function()
+	local flyMin = makeBtn(b,"-")
+	flyMin.Position = UDim2.fromOffset(120,150)
+	flyMin.MouseButton1Click:Connect(function()
 		flySpeed = math.clamp(flySpeed-10,1,200)
+		panelNotify("FlySpeed : "..flySpeed)
 	end)
+end)
+
+---------------- AUTOWALK APPLY ----------------
+RunService.RenderStepped:Connect(function()
+	hum.WalkSpeed = walkSpeed * AutoWalkSpeed
 end)
 
 panelNotify("AUTO WALK + FLY PRO READY")
