@@ -1,12 +1,11 @@
 -- AUTO WALK + FLY PRO HP
--- FINAL REAL BUILD (STABLE + FULL FEATURE)
+-- FINAL STABLE BUILD (UI FIXED + ALL FEATURES)
 
 ---------------- SERVICES ----------------
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 
----------------- PLAYER ----------------
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
@@ -21,36 +20,20 @@ local recording = false
 local paused = false
 local playing = false
 local loopPlay = false
+
 local track = {}
 local playIndex = 1
 local walkSpeed = 20
 
----------------- NOTIFY ----------------
-local function notify(txt)
-	local g = Instance.new("ScreenGui",player.PlayerGui)
-	g.ResetOnSpawn = false
-	local f = Instance.new("Frame",g)
-	f.Size = UDim2.new(0,260,0,40)
-	f.Position = UDim2.new(0.5,-130,0.85,0)
-	f.BackgroundColor3 = Color3.fromRGB(30,40,80)
-	Instance.new("UICorner",f).CornerRadius = UDim.new(0,10)
-
-	local t = Instance.new("TextLabel",f)
-	t.Size = UDim2.new(1,0,1,0)
-	t.BackgroundTransparency = 1
-	t.Text = txt
-	t.TextColor3 = Color3.new(1,1,1)
-	t.Font = Enum.Font.GothamBold
-	t.TextSize = 13
-
-	task.delay(2,function()
-		g:Destroy()
-	end)
-end
+---------------- GUI BASE ----------------
+local gui = Instance.new("ScreenGui")
+gui.Name = "AutoWalkPro"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
 ---------------- PANEL MAKER ----------------
 local function createPanel(size,pos,titleText)
-	local f = Instance.new("Frame",player.PlayerGui)
+	local f = Instance.new("Frame",gui)
 	f.Size = size
 	f.Position = pos
 	f.BackgroundColor3 = Color3.fromRGB(20,25,45)
@@ -61,7 +44,7 @@ local function createPanel(size,pos,titleText)
 
 	local header = Instance.new("Frame",f)
 	header.Size = UDim2.new(1,0,0,34)
-	header.BackgroundColor3 = Color3.fromRGB(35,45,90)
+	header.BackgroundColor3 = Color3.fromRGB(30,40,80)
 	Instance.new("UICorner",header).CornerRadius = UDim.new(0,12)
 
 	local title = Instance.new("TextLabel",header)
@@ -80,7 +63,7 @@ local function createPanel(size,pos,titleText)
 	close.Text = "✕"
 	close.Font = Enum.Font.GothamBold
 	close.TextColor3 = Color3.new(1,1,1)
-	close.BackgroundColor3 = Color3.fromRGB(160,60,60)
+	close.BackgroundColor3 = Color3.fromRGB(150,60,60)
 	Instance.new("UICorner",close)
 
 	local mini = Instance.new("TextButton",header)
@@ -95,6 +78,7 @@ local function createPanel(size,pos,titleText)
 	local body = Instance.new("ScrollingFrame",f)
 	body.Position = UDim2.new(0,8,0,40)
 	body.Size = UDim2.new(1,-16,1,-48)
+	body.CanvasSize = UDim2.new(0,0,0,0)
 	body.ScrollBarThickness = 6
 	body.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	body.BackgroundTransparency = 1
@@ -129,31 +113,28 @@ local function makeBtn(parent,text)
 	return b
 end
 
----------------- MAIN PANEL (PENDEK) ----------------
+---------------- MAIN PANEL (PENDEK + SCROLL) ----------------
 local main,body = createPanel(
-	UDim2.new(0,280,0,240),
+	UDim2.new(0,280,0,260),
 	UDim2.new(0.05,0,0.2,0),
 	"AUTO WALK PRO"
 )
 
--- 4 FITUR AWAL KELIHATAN
-local recBtn   = makeBtn(body,"● Record / Stop (Double)")
-local pauseBtn = makeBtn(body,"⏸ Pause Record")
-local playBtn  = makeBtn(body,"▶ Play AutoWalk")
-local stopBtn  = makeBtn(body,"⏹ Stop Play")
-
--- FITUR LAIN (SCROLL)
-local loopBtn  = makeBtn(body,"🔁 Loop : OFF")
-local speedBtn = makeBtn(body,"⚙ Speed AutoWalk")
-local histBtn  = makeBtn(body,"📂 History")
-local flyBtn   = makeBtn(body,"🕊 Fly")
+local recordBtn = makeBtn(body,"● Record / Stop (Double)")
+local pauseBtn  = makeBtn(body,"⏸ Pause Record")
+local playBtn   = makeBtn(body,"▶ Play AutoWalk")
+local stopBtn   = makeBtn(body,"⏹ Stop Play")
+local loopBtn   = makeBtn(body,"🔁 Loop : OFF")
+local speedBtn  = makeBtn(body,"⚙ Speed AutoWalk")
+local histBtn   = makeBtn(body,"📂 History")
+local flyBtn    = makeBtn(body,"🕊 Fly")
 
 ---------------- RECORD ----------------
-local lastRec = 0
-recBtn.MouseButton1Click:Connect(function()
-	if tick()-lastRec < 0.4 then
+local lastRecClick = 0
+recordBtn.MouseButton1Click:Connect(function()
+	if tick() - lastRecClick < 0.4 then
 		recording = false
-		recBtn.Text = "● Record / Stop (Double)"
+		recordBtn.Text = "● Record / Stop (Double)"
 		local name = "track_"..os.time()..".lua"
 		local data = "return {\n"
 		for _,p in ipairs(track) do
@@ -161,21 +142,19 @@ recBtn.MouseButton1Click:Connect(function()
 		end
 		data ..= "}"
 		writefile("tracks/"..name,data)
-		notify("Track disimpan")
 	else
 		track = {}
 		recording = true
 		paused = false
-		recBtn.Text = "● Recording..."
-		notify("Record ON")
+		recordBtn.Text = "● Recording..."
 	end
-	lastRec = tick()
+	lastRecClick = tick()
 end)
 
 pauseBtn.MouseButton1Click:Connect(function()
 	if recording then
 		paused = not paused
-		notify(paused and "Record Pause" or "Record Lanjut")
+		pauseBtn.Text = paused and "▶ Resume Record" or "⏸ Pause Record"
 	end
 end)
 
@@ -187,19 +166,11 @@ end)
 
 ---------------- PLAY ----------------
 playBtn.MouseButton1Click:Connect(function()
-	if #track < 2 then return notify("Track kosong") end
+	if playing or #track < 2 then return end
 	playing = true
 	playIndex = 1
-	notify("Play AutoWalk")
-end)
-
-stopBtn.MouseButton1Click:Connect(function()
-	playing = false
-	notify("Play Stop")
-end)
-
-RunService.RenderStepped:Connect(function()
-	if playing then
+	RunService.RenderStepped:Connect(function()
+		if not playing then return end
 		local p = track[math.floor(playIndex)]
 		if p then
 			root.CFrame = CFrame.new(p)
@@ -209,19 +180,21 @@ RunService.RenderStepped:Connect(function()
 				playIndex = 1
 			else
 				playing = false
-				notify("Play selesai")
 			end
 		end
-	end
+	end)
 end)
 
----------------- LOOP ----------------
+stopBtn.MouseButton1Click:Connect(function()
+	playing = false
+end)
+
+---------------- LOOP (DOUBLE CLICK) ----------------
 local lastLoop = 0
 loopBtn.MouseButton1Click:Connect(function()
-	if tick()-lastLoop < 0.4 then
+	if tick() - lastLoop < 0.4 then
 		loopPlay = not loopPlay
 		loopBtn.Text = "🔁 Loop : "..(loopPlay and "ON" or "OFF")
-		notify("Loop "..(loopPlay and "ON" or "OFF"))
 	end
 	lastLoop = tick()
 end)
@@ -229,17 +202,18 @@ end)
 ---------------- SPEED PANEL ----------------
 speedBtn.MouseButton1Click:Connect(function()
 	local p,b = createPanel(
-		UDim2.new(0,240,0,180),
+		UDim2.new(0,230,0,160),
 		UDim2.new(0.35,0,0.3,0),
 		"SPEED"
 	)
 
 	local label = Instance.new("TextLabel",b)
-	label.Size = UDim2.new(1,0,0,28)
+	label.Size = UDim2.new(1,0,0,30)
 	label.Text = "Speed : "..walkSpeed
-	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.new(1,1,1)
 	label.Font = Enum.Font.GothamBold
+	label.TextSize = 13
+	label.TextColor3 = Color3.new(1,1,1)
+	label.BackgroundTransparency = 1
 
 	local plus = makeBtn(b,"+")
 	local minus = makeBtn(b,"-")
@@ -266,21 +240,19 @@ histBtn.MouseButton1Click:Connect(function()
 		local play = makeBtn(b,file:match("([^/]+)$"))
 		play.MouseButton1Click:Connect(function()
 			track = loadfile(file)()
-			notify("Track dipilih")
 		end)
 
 		local del = makeBtn(b,"Delete")
-		del.BackgroundColor3 = Color3.fromRGB(160,60,60)
+		del.BackgroundColor3 = Color3.fromRGB(150,60,60)
 		del.MouseButton1Click:Connect(function()
 			delfile(file)
 			play:Destroy()
 			del:Destroy()
-			notify("Track dihapus")
 		end)
 	end
 end)
 
----------------- FLY PANEL ----------------
+---------------- FLY PANEL (MANUAL) ----------------
 flyBtn.MouseButton1Click:Connect(function()
 	local flying = false
 	local flySpeed = 40
@@ -298,7 +270,6 @@ flyBtn.MouseButton1Click:Connect(function()
 
 	toggle.MouseButton1Click:Connect(function()
 		flying = not flying
-		notify("Fly "..(flying and "ON" or "OFF"))
 		if flying then
 			bv = Instance.new("BodyVelocity",root)
 			bg = Instance.new("BodyGyro",root)
