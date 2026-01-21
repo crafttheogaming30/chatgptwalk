@@ -1,5 +1,5 @@
 -- AUTO WALK + FLY PRO HP
--- Rebuild Total by ChatGPT for Teyoo
+-- Rebuild Total by ChatGPT for Teyoo (UI FIX ONLY)
 
 -- SERVICES
 local Players = game:GetService("Players")
@@ -39,6 +39,8 @@ local THEME = {
 ------------------------------------------------
 local function notify(txt)
 	local gui = Instance.new("ScreenGui", game.CoreGui)
+	gui.ResetOnSpawn = false
+
 	local f = Instance.new("Frame", gui)
 	f.Size = UDim2.fromScale(0.35,0.07)
 	f.Position = UDim2.fromScale(0.325,0.85)
@@ -63,6 +65,7 @@ end
 ------------------------------------------------
 local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "AutoWalkPro"
+gui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", gui)
 main.Size = UDim2.fromOffset(280,260)
@@ -102,16 +105,26 @@ local body = Instance.new("ScrollingFrame", main)
 body.Position = UDim2.fromOffset(8,40)
 body.Size = UDim2.fromOffset(264,210)
 body.ScrollBarThickness = 6
-body.AutomaticCanvasSize = Enum.AutomaticSize.Y
 body.BackgroundTransparency = 1
+body.CanvasSize = UDim2.new(0,0,0,0)
+
+------------------------------------------------
+-- UI LAYOUT (FIX UTAMA)
+------------------------------------------------
+local layout = Instance.new("UIListLayout", body)
+layout.Padding = UDim.new(0,6)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	body.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 10)
+end)
 
 ------------------------------------------------
 -- UI HELPERS
 ------------------------------------------------
-local function button(txt,y)
+local function button(txt)
 	local b = Instance.new("TextButton", body)
 	b.Size = UDim2.fromOffset(240,32)
-	b.Position = UDim2.fromOffset(10,y)
 	b.Text = txt
 	b.Font = Enum.Font.GothamMedium
 	b.TextSize = 13
@@ -124,12 +137,11 @@ end
 ------------------------------------------------
 -- BUTTONS
 ------------------------------------------------
-local y = 10
-local recordBtn = button("● Record",y); y+=38
-local stopBtn = button("⏹ Stop Record",y); y+=38
-local playBtn = button("▶ Play Track",y); y+=38
-local historyBtn = button("📂 History",y); y+=38
-local flyBtn = button("🛫 Fly : OFF",y); y+=38
+local recordBtn = button("● Record")
+local stopBtn = button("⏹ Stop Record")
+local playBtn = button("▶ Play Track")
+local historyBtn = button("📂 History")
+local flyBtn = button("🛫 Fly : OFF")
 
 ------------------------------------------------
 -- RECORD LOGIC
@@ -194,7 +206,7 @@ playBtn.MouseButton1Click:Connect(function()
 end)
 
 ------------------------------------------------
--- FLY (MANUAL CONTROL)
+-- FLY (MANUAL CONTROL - TETEP)
 ------------------------------------------------
 flyBtn.MouseButton1Click:Connect(function()
 	flyEnabled = not flyEnabled
