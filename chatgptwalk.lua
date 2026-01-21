@@ -1,21 +1,16 @@
 -- AUTO WALK + FLY PRO HP
--- Rebuild Total by ChatGPT for Teyoo (UI FIX ONLY)
+-- UI SAFE VERSION (DELTA FIX)
 
--- SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
 local Player = Players.LocalPlayer
 local Char = Player.Character or Player.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 local Humanoid = Char:WaitForChild("Humanoid")
 
--- FILE
 if not isfolder("tracks") then makefolder("tracks") end
 
--- STATE
 local recording = false
 local paused = false
 local playing = false
@@ -25,12 +20,9 @@ local track = {}
 local playIndex = 1
 local recordConn, playConn, flyConn
 
--- THEME
 local THEME = {
-	bg = Color3.fromRGB(15,25,40),
 	panel = Color3.fromRGB(20,35,60),
 	header = Color3.fromRGB(30,55,90),
-	accent = Color3.fromRGB(90,160,255),
 	text = Color3.fromRGB(235,240,255)
 }
 
@@ -38,33 +30,19 @@ local THEME = {
 -- NOTIFY
 ------------------------------------------------
 local function notify(txt)
-	local gui = Instance.new("ScreenGui", game.CoreGui)
-	gui.ResetOnSpawn = false
-
-	local f = Instance.new("Frame", gui)
-	f.Size = UDim2.fromScale(0.35,0.07)
-	f.Position = UDim2.fromScale(0.325,0.85)
-	f.BackgroundColor3 = THEME.panel
-	Instance.new("UICorner", f).CornerRadius = UDim.new(0,14)
-
-	local t = Instance.new("TextLabel", f)
-	t.Size = UDim2.fromScale(1,1)
-	t.BackgroundTransparency = 1
-	t.Text = txt
-	t.TextColor3 = THEME.text
-	t.Font = Enum.Font.GothamMedium
-	t.TextSize = 14
-
-	task.delay(2,function()
-		gui:Destroy()
+	pcall(function()
+		game.StarterGui:SetCore("SendNotification",{
+			Title="AutoWalk",
+			Text=txt,
+			Duration=2
+		})
 	end)
 end
 
 ------------------------------------------------
--- UI BASE
+-- UI
 ------------------------------------------------
 local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "AutoWalkPro"
 gui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", gui)
@@ -81,8 +59,8 @@ header.BackgroundColor3 = THEME.header
 Instance.new("UICorner", header).CornerRadius = UDim.new(0,16)
 
 local title = Instance.new("TextLabel", header)
-title.Size = UDim2.new(0.7,0,1,0)
-title.Position = UDim2.fromScale(0.05,0)
+title.Size = UDim2.new(1,-40,1,0)
+title.Position = UDim2.fromOffset(10,0)
 title.Text = "AUTO WALK PRO"
 title.TextColor3 = THEME.text
 title.Font = Enum.Font.GothamBold
@@ -92,39 +70,21 @@ title.TextXAlignment = Left
 
 local close = Instance.new("TextButton", header)
 close.Size = UDim2.fromOffset(28,28)
-close.Position = UDim2.new(1,-32,0,2)
+close.Position = UDim2.fromOffset(245,2)
 close.Text = "✕"
-close.Font = Enum.Font.GothamBold
 close.TextColor3 = THEME.text
 close.BackgroundTransparency = 1
 close.MouseButton1Click:Connect(function()
 	gui:Destroy()
 end)
 
-local body = Instance.new("ScrollingFrame", main)
-body.Position = UDim2.fromOffset(8,40)
-body.Size = UDim2.fromOffset(264,210)
-body.ScrollBarThickness = 6
-body.BackgroundTransparency = 1
-body.CanvasSize = UDim2.new(0,0,0,0)
-
 ------------------------------------------------
--- UI LAYOUT (FIX UTAMA)
+-- BUTTON MAKER (MANUAL POS)
 ------------------------------------------------
-local layout = Instance.new("UIListLayout", body)
-layout.Padding = UDim.new(0,6)
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-	body.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 10)
-end)
-
-------------------------------------------------
--- UI HELPERS
-------------------------------------------------
-local function button(txt)
-	local b = Instance.new("TextButton", body)
+local function button(txt,y)
+	local b = Instance.new("TextButton", main)
 	b.Size = UDim2.fromOffset(240,32)
+	b.Position = UDim2.fromOffset(20,y)
 	b.Text = txt
 	b.Font = Enum.Font.GothamMedium
 	b.TextSize = 13
@@ -135,16 +95,17 @@ local function button(txt)
 end
 
 ------------------------------------------------
--- BUTTONS
+-- BUTTONS (FIXED Y)
 ------------------------------------------------
-local recordBtn = button("● Record")
-local stopBtn = button("⏹ Stop Record")
-local playBtn = button("▶ Play Track")
-local historyBtn = button("📂 History")
-local flyBtn = button("🛫 Fly : OFF")
+local y = 50
+local recordBtn = button("● Record",y); y+=36
+local stopBtn = button("⏹ Stop Record",y); y+=36
+local playBtn = button("▶ Play Track",y); y+=36
+local historyBtn = button("📂 History",y); y+=36
+local flyBtn = button("🛫 Fly : OFF",y)
 
 ------------------------------------------------
--- RECORD LOGIC
+-- RECORD
 ------------------------------------------------
 recordBtn.MouseButton1Click:Connect(function()
 	if not recording then
@@ -152,18 +113,16 @@ recordBtn.MouseButton1Click:Connect(function()
 		paused = false
 		track = {}
 		recordBtn.Text = "⏸ Pause"
-		notify("Record started")
+		notify("Record start")
 	else
 		paused = not paused
 		recordBtn.Text = paused and "▶ Resume" or "⏸ Pause"
-		notify(paused and "Paused" or "Resumed")
 	end
 end)
 
 stopBtn.MouseButton1Click:Connect(function()
 	if recording then
 		recording = false
-		paused = false
 		recordBtn.Text = "● Record"
 		local name = "track_"..os.time()..".lua"
 		local data = "return {\n"
@@ -172,7 +131,7 @@ stopBtn.MouseButton1Click:Connect(function()
 		end
 		data ..= "}"
 		writefile("tracks/"..name,data)
-		notify("Saved "..name)
+		notify("Saved")
 	end
 end)
 
@@ -191,33 +150,33 @@ playBtn.MouseButton1Click:Connect(function()
 	local data = loadfile(files[#files])()
 	playIndex = 1
 	playing = true
+
 	if playConn then playConn:Disconnect() end
 	playConn = RunService.RenderStepped:Connect(function()
-		if not playing then playConn:Disconnect() return end
 		local p = data[math.floor(playIndex)]
 		if p then
 			HRP.CFrame = CFrame.new(p)
 			playIndex += speed/6
 		else
 			playing = false
-			notify("Play done")
+			notify("Done")
+			playConn:Disconnect()
 		end
 	end)
 end)
 
 ------------------------------------------------
--- FLY (MANUAL CONTROL - TETEP)
+-- FLY (MANUAL)
 ------------------------------------------------
 flyBtn.MouseButton1Click:Connect(function()
 	flyEnabled = not flyEnabled
 	flyBtn.Text = "🛫 Fly : "..(flyEnabled and "ON" or "OFF")
-	notify("Fly "..(flyEnabled and "ON" or "OFF"))
 
 	if flyEnabled then
 		Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 		flyConn = RunService.RenderStepped:Connect(function()
-			local move = Humanoid.MoveDirection
-			HRP.Velocity = Vector3.new(move.X*speed,0,move.Z*speed)
+			local m = Humanoid.MoveDirection
+			HRP.Velocity = Vector3.new(m.X*speed,0,m.Z*speed)
 		end)
 	else
 		if flyConn then flyConn:Disconnect() end
