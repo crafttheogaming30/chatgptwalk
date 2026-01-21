@@ -1,461 +1,328 @@
--- AUTO WALK + FLY FULL PRO (COREGUI SAFE)
--- HP / Delta / Anti UI Hilang
--- by ChatGPT for Teyoo
+-- AUTO WALK + FLY PRO HP
+-- FINAL REAL BUILD (STABLE + FULL FEATURE)
 
-------------------------------------------------
--- ANTI DUPLIKAT GUI
-------------------------------------------------
-pcall(function()
-	if game.CoreGui:FindFirstChild("AutoWalkFullGUI") then
-		game.CoreGui.AutoWalkFullGUI:Destroy()
-	end
-end)
-
-------------------------------------------------
--- SERVICES
-------------------------------------------------
+---------------- SERVICES ----------------
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
+---------------- PLAYER ----------------
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
 local root = char:WaitForChild("HumanoidRootPart")
 local cam = workspace.CurrentCamera
 
-------------------------------------------------
--- FILE SYSTEM
-------------------------------------------------
-if not isfolder("autowalk_tracks") then
-	makefolder("autowalk_tracks")
-end
+---------------- FILE ----------------
+if not isfolder("tracks") then makefolder("tracks") end
 
-------------------------------------------------
--- STATE
-------------------------------------------------
+---------------- STATE ----------------
 local recording = false
 local paused = false
 local playing = false
 local loopPlay = false
-
 local track = {}
-local recordConn, playConn
+local playIndex = 1
+local walkSpeed = 20
 
-local walkSpeed = 25
-
-------------------------------------------------
--- FLY STATE
-------------------------------------------------
-local flyEnabled = false
-local flySpeed = 40
-local bv, bg, flyConn
-
-------------------------------------------------
--- THEME
-------------------------------------------------
-local THEME = {
-	bg = Color3.fromRGB(18,22,38),
-	panel = Color3.fromRGB(25,30,55),
-	btn = Color3.fromRGB(45,65,130),
-	accent = Color3.fromRGB(90,160,255),
-	text = Color3.fromRGB(235,240,255),
-	danger = Color3.fromRGB(170,60,60)
-}
-
-------------------------------------------------
--- GUI BASE (COREGUI)
-------------------------------------------------
-local gui = Instance.new("ScreenGui")
-gui.Name = "AutoWalkFullGUI"
-gui.ResetOnSpawn = false
-gui.Parent = game.CoreGui
-
-------------------------------------------------
--- NOTIFY
-------------------------------------------------
+---------------- NOTIFY ----------------
 local function notify(txt)
-	local n = Instance.new("TextLabel", gui)
-	n.Size = UDim2.fromScale(0.4,0.06)
-	n.Position = UDim2.fromScale(0.3,0.86)
-	n.BackgroundColor3 = THEME.panel
-	n.TextColor3 = THEME.text
-	n.Text = txt
-	n.Font = Enum.Font.GothamMedium
-	n.TextSize = 14
-	n.TextScaled = true
-	n.BackgroundTransparency = 0
-	Instance.new("UICorner", n).CornerRadius = UDim.new(0,14)
+	local g = Instance.new("ScreenGui",player.PlayerGui)
+	g.ResetOnSpawn = false
+	local f = Instance.new("Frame",g)
+	f.Size = UDim2.new(0,260,0,40)
+	f.Position = UDim2.new(0.5,-130,0.85,0)
+	f.BackgroundColor3 = Color3.fromRGB(30,40,80)
+	Instance.new("UICorner",f).CornerRadius = UDim.new(0,10)
 
-	TweenService:Create(n, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+	local t = Instance.new("TextLabel",f)
+	t.Size = UDim2.new(1,0,1,0)
+	t.BackgroundTransparency = 1
+	t.Text = txt
+	t.TextColor3 = Color3.new(1,1,1)
+	t.Font = Enum.Font.GothamBold
+	t.TextSize = 13
+
 	task.delay(2,function()
-		TweenService:Create(n, TweenInfo.new(0.3), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
-		task.wait(0.35)
-		n:Destroy()
+		g:Destroy()
 	end)
 end
 
-------------------------------------------------
--- UI HELPERS
-------------------------------------------------
-local function makeCorner(obj,r)
-	local c = Instance.new("UICorner",obj)
-	c.CornerRadius = UDim.new(0,r or 10)
-end
-
-local function makePanel(titleText, size, pos)
-	local f = Instance.new("Frame", gui)
+---------------- PANEL MAKER ----------------
+local function createPanel(size,pos,titleText)
+	local f = Instance.new("Frame",player.PlayerGui)
 	f.Size = size
 	f.Position = pos
-	f.BackgroundColor3 = THEME.panel
+	f.BackgroundColor3 = Color3.fromRGB(20,25,45)
+	f.BorderSizePixel = 0
 	f.Active = true
 	f.Draggable = true
-	makeCorner(f,14)
+	Instance.new("UICorner",f).CornerRadius = UDim.new(0,12)
 
-	local header = Instance.new("Frame", f)
-	header.Size = UDim2.new(1,0,0,36)
-	header.BackgroundColor3 = THEME.bg
-	makeCorner(header,14)
+	local header = Instance.new("Frame",f)
+	header.Size = UDim2.new(1,0,0,34)
+	header.BackgroundColor3 = Color3.fromRGB(35,45,90)
+	Instance.new("UICorner",header).CornerRadius = UDim.new(0,12)
 
-	local title = Instance.new("TextLabel", header)
+	local title = Instance.new("TextLabel",header)
 	title.Size = UDim2.new(1,-80,1,0)
-	title.Position = UDim2.fromOffset(10,0)
+	title.Position = UDim2.new(0,10,0,0)
 	title.Text = titleText
 	title.Font = Enum.Font.GothamBold
-	title.TextSize = 14
-	title.TextColor3 = THEME.text
+	title.TextSize = 13
+	title.TextColor3 = Color3.new(1,1,1)
 	title.BackgroundTransparency = 1
-	title.TextXAlignment = Left
+	title.TextXAlignment = Enum.TextXAlignment.Left
 
-	local close = Instance.new("TextButton", header)
-	close.Size = UDim2.fromOffset(28,28)
-	close.Position = UDim2.new(1,-32,0,4)
-	close.Text = "X"
+	local close = Instance.new("TextButton",header)
+	close.Size = UDim2.new(0,26,0,26)
+	close.Position = UDim2.new(1,-30,0,4)
+	close.Text = "✕"
 	close.Font = Enum.Font.GothamBold
-	close.TextSize = 14
 	close.TextColor3 = Color3.new(1,1,1)
-	close.BackgroundColor3 = THEME.danger
-	makeCorner(close,8)
+	close.BackgroundColor3 = Color3.fromRGB(160,60,60)
+	Instance.new("UICorner",close)
 
-	local mini = Instance.new("TextButton", header)
-	mini.Size = UDim2.fromOffset(28,28)
-	mini.Position = UDim2.new(1,-64,0,4)
+	local mini = Instance.new("TextButton",header)
+	mini.Size = UDim2.new(0,26,0,26)
+	mini.Position = UDim2.new(1,-60,0,4)
 	mini.Text = "—"
 	mini.Font = Enum.Font.GothamBold
-	mini.TextSize = 16
 	mini.TextColor3 = Color3.new(1,1,1)
-	mini.BackgroundColor3 = THEME.btn
-	makeCorner(mini,8)
+	mini.BackgroundColor3 = Color3.fromRGB(70,90,160)
+	Instance.new("UICorner",mini)
 
-	return f, header, close, mini
+	local body = Instance.new("ScrollingFrame",f)
+	body.Position = UDim2.new(0,8,0,40)
+	body.Size = UDim2.new(1,-16,1,-48)
+	body.ScrollBarThickness = 6
+	body.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	body.BackgroundTransparency = 1
+
+	local layout = Instance.new("UIListLayout",body)
+	layout.Padding = UDim.new(0,6)
+
+	close.MouseButton1Click:Connect(function()
+		f:Destroy()
+	end)
+
+	local minimized = false
+	mini.MouseButton1Click:Connect(function()
+		minimized = not minimized
+		body.Visible = not minimized
+		f.Size = minimized and UDim2.new(0,size.X.Offset,0,36) or size
+	end)
+
+	return f,body
 end
 
-local function makeScroll(parent)
-	local s = Instance.new("ScrollingFrame", parent)
-	s.Position = UDim2.fromOffset(10,44)
-	s.Size = UDim2.new(1,-20,1,-54)
-	s.ScrollBarThickness = 6
-	s.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	s.CanvasSize = UDim2.new(0,0,0,0)
-	s.BackgroundTransparency = 1
-
-	local lay = Instance.new("UIListLayout", s)
-	lay.Padding = UDim.new(0,8)
-
-	return s
-end
-
-local function makeBtn(parent, txt)
-	local b = Instance.new("TextButton", parent)
-	b.Size = UDim2.new(1,0,0,36)
-	b.Text = txt
+local function makeBtn(parent,text)
+	local b = Instance.new("TextButton",parent)
+	b.Size = UDim2.new(1,0,0,32)
+	b.Text = text
 	b.Font = Enum.Font.Gotham
 	b.TextSize = 13
-	b.TextColor3 = THEME.text
-	b.BackgroundColor3 = THEME.btn
+	b.TextColor3 = Color3.new(1,1,1)
+	b.BackgroundColor3 = Color3.fromRGB(60,80,150)
 	b.BorderSizePixel = 0
-	makeCorner(b,10)
+	Instance.new("UICorner",b)
 	return b
 end
 
-------------------------------------------------
--- MAIN PANEL (PENDEK + SCROLL)
-------------------------------------------------
-local main, mainHeader, mainClose, mainMini =
-	makePanel("AUTO WALK PRO",
-		UDim2.fromOffset(280,260),
-		UDim2.fromScale(0.05,0.25)
-	)
+---------------- MAIN PANEL (PENDEK) ----------------
+local main,body = createPanel(
+	UDim2.new(0,280,0,240),
+	UDim2.new(0.05,0,0.2,0),
+	"AUTO WALK PRO"
+)
 
-local mainBody = makeScroll(main)
+-- 4 FITUR AWAL KELIHATAN
+local recBtn   = makeBtn(body,"● Record / Stop (Double)")
+local pauseBtn = makeBtn(body,"⏸ Pause Record")
+local playBtn  = makeBtn(body,"▶ Play AutoWalk")
+local stopBtn  = makeBtn(body,"⏹ Stop Play")
 
--- minimize main
-local mainMinimized = false
-local mainIcon
-mainMini.MouseButton1Click:Connect(function()
-	mainMinimized = not mainMinimized
-	if mainMinimized then
-		main.Visible = false
-		mainIcon = Instance.new("TextButton", gui)
-		mainIcon.Size = UDim2.fromOffset(120,32)
-		mainIcon.Position = UDim2.fromScale(0.05,0.25)
-		mainIcon.Text = "AutoWalk"
-		mainIcon.Font = Enum.Font.GothamBold
-		mainIcon.TextSize = 13
-		mainIcon.TextColor3 = THEME.text
-		mainIcon.BackgroundColor3 = THEME.panel
-		makeCorner(mainIcon,12)
-		mainIcon.Active = true
-		mainIcon.Draggable = true
-		mainIcon.MouseButton1Click:Connect(function()
-			main.Visible = true
-			mainIcon:Destroy()
-			mainMinimized = false
-		end)
-	end
-end)
+-- FITUR LAIN (SCROLL)
+local loopBtn  = makeBtn(body,"🔁 Loop : OFF")
+local speedBtn = makeBtn(body,"⚙ Speed AutoWalk")
+local histBtn  = makeBtn(body,"📂 History")
+local flyBtn   = makeBtn(body,"🕊 Fly")
 
-mainClose.MouseButton1Click:Connect(function()
-	gui:Destroy()
-end)
-
-------------------------------------------------
--- BUTTONS (4 AWAL TERLIHAT)
-------------------------------------------------
-local recordBtn = makeBtn(mainBody,"● Record (Double Tap Stop)")
-local pauseBtn  = makeBtn(mainBody,"⏸ Pause Record")
-local playBtn   = makeBtn(mainBody,"▶ Play AutoWalk")
-local stopPlayBtn = makeBtn(mainBody,"⏹ Stop AutoWalk")
-
--- SCROLL KE BAWAH
-local speedBtn  = makeBtn(mainBody,"⚙ Speed AutoWalk")
-local loopBtn   = makeBtn(mainBody,"🔁 Loop OFF (Double Tap)")
-local historyBtn= makeBtn(mainBody,"📂 History Track")
-local flyBtn    = makeBtn(mainBody,"🛫 Fly Panel")
-
-------------------------------------------------
--- RECORD LOGIC (DOUBLE TAP STOP)
-------------------------------------------------
-local lastRecordTap = 0
-
-recordBtn.MouseButton1Click:Connect(function()
-	local now = tick()
-	if recording and now-lastRecordTap < 0.35 then
-		-- STOP
+---------------- RECORD ----------------
+local lastRec = 0
+recBtn.MouseButton1Click:Connect(function()
+	if tick()-lastRec < 0.4 then
 		recording = false
-		paused = false
-		recordBtn.Text = "● Record (Double Tap Stop)"
-		pauseBtn.Text = "⏸ Pause Record"
-
+		recBtn.Text = "● Record / Stop (Double)"
 		local name = "track_"..os.time()..".lua"
 		local data = "return {\n"
 		for _,p in ipairs(track) do
 			data ..= string.format("Vector3.new(%f,%f,%f),\n",p.X,p.Y,p.Z)
 		end
 		data ..= "}"
-		writefile("autowalk_tracks/"..name,data)
-		notify("Record saved: "..name)
+		writefile("tracks/"..name,data)
+		notify("Track disimpan")
 	else
-		-- START
+		track = {}
 		recording = true
 		paused = false
-		track = {}
-		recordBtn.Text = "● Recording..."
-		notify("Record started")
+		recBtn.Text = "● Recording..."
+		notify("Record ON")
 	end
-	lastRecordTap = now
+	lastRec = tick()
 end)
 
 pauseBtn.MouseButton1Click:Connect(function()
-	if not recording then return end
-	paused = not paused
-	pauseBtn.Text = paused and "▶ Resume Record" or "⏸ Pause Record"
-	notify(paused and "Record paused" or "Record resumed")
+	if recording then
+		paused = not paused
+		notify(paused and "Record Pause" or "Record Lanjut")
+	end
 end)
 
-recordConn = RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function()
 	if recording and not paused then
-		table.insert(track, root.Position)
+		table.insert(track,root.Position)
 	end
 end)
 
-------------------------------------------------
--- PLAY / STOP AUTOWALK
-------------------------------------------------
-local function stopPlay()
-	playing = false
-	if playConn then playConn:Disconnect() end
-	notify("Play stopped")
-end
-
+---------------- PLAY ----------------
 playBtn.MouseButton1Click:Connect(function()
-	if playing then return end
-
-	local files = listfiles("autowalk_tracks")
-	if #files == 0 then
-		return notify("No track found")
-	end
-
-	local data = loadfile(files[#files])()
-	if not data or #data < 2 then
-		return notify("Track invalid")
-	end
-
+	if #track < 2 then return notify("Track kosong") end
 	playing = true
-	notify("Play started")
+	playIndex = 1
+	notify("Play AutoWalk")
+end)
 
-	local i = 1
-	playConn = RunService.RenderStepped:Connect(function()
-		if not playing then return end
-		if data[i] then
-			root.CFrame = CFrame.new(data[i])
-			i += math.clamp(walkSpeed/10,1,5)
+stopBtn.MouseButton1Click:Connect(function()
+	playing = false
+	notify("Play Stop")
+end)
+
+RunService.RenderStepped:Connect(function()
+	if playing then
+		local p = track[math.floor(playIndex)]
+		if p then
+			root.CFrame = CFrame.new(p)
+			playIndex += walkSpeed/10
 		else
 			if loopPlay then
-				i = 1
+				playIndex = 1
 			else
-				stopPlay()
+				playing = false
+				notify("Play selesai")
 			end
 		end
-	end)
-end)
-
-stopPlayBtn.MouseButton1Click:Connect(stopPlay)
-
-------------------------------------------------
--- LOOP (DOUBLE TAP)
-------------------------------------------------
-local lastLoopTap = 0
-loopBtn.MouseButton1Click:Connect(function()
-	local now = tick()
-	if now-lastLoopTap < 0.35 then
-		loopPlay = not loopPlay
-		loopBtn.Text = loopPlay and "🔁 Loop ON (Double Tap)" or "🔁 Loop OFF (Double Tap)"
-		notify(loopPlay and "Loop ON" or "Loop OFF")
 	end
-	lastLoopTap = now
 end)
 
-------------------------------------------------
--- SPEED AUTOWALK PANEL
-------------------------------------------------
+---------------- LOOP ----------------
+local lastLoop = 0
+loopBtn.MouseButton1Click:Connect(function()
+	if tick()-lastLoop < 0.4 then
+		loopPlay = not loopPlay
+		loopBtn.Text = "🔁 Loop : "..(loopPlay and "ON" or "OFF")
+		notify("Loop "..(loopPlay and "ON" or "OFF"))
+	end
+	lastLoop = tick()
+end)
+
+---------------- SPEED PANEL ----------------
 speedBtn.MouseButton1Click:Connect(function()
-	local p,_,c,m = makePanel(
-		"AutoWalk Speed",
-		UDim2.fromOffset(220,140),
-		UDim2.fromScale(0.4,0.35)
+	local p,b = createPanel(
+		UDim2.new(0,240,0,180),
+		UDim2.new(0.35,0,0.3,0),
+		"SPEED"
 	)
 
-	local body = makeScroll(p)
+	local label = Instance.new("TextLabel",b)
+	label.Size = UDim2.new(1,0,0,28)
+	label.Text = "Speed : "..walkSpeed
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.new(1,1,1)
+	label.Font = Enum.Font.GothamBold
 
-	local label = makeBtn(body,"Speed : "..walkSpeed)
-	label.Active = false
-
-	local plus = makeBtn(body,"+")
-	local minus = makeBtn(body,"-")
+	local plus = makeBtn(b,"+")
+	local minus = makeBtn(b,"-")
 
 	plus.MouseButton1Click:Connect(function()
-		walkSpeed = math.clamp(walkSpeed+5,5,100)
+		walkSpeed = math.clamp(walkSpeed+2,5,100)
 		label.Text = "Speed : "..walkSpeed
-		notify("Speed "..walkSpeed)
 	end)
 	minus.MouseButton1Click:Connect(function()
-		walkSpeed = math.clamp(walkSpeed-5,5,100)
+		walkSpeed = math.clamp(walkSpeed-2,5,100)
 		label.Text = "Speed : "..walkSpeed
-		notify("Speed "..walkSpeed)
 	end)
-
-	c.MouseButton1Click:Connect(function() p:Destroy() end)
-	m.MouseButton1Click:Connect(function() p.Visible = false end)
 end)
 
-------------------------------------------------
--- HISTORY PANEL
-------------------------------------------------
-historyBtn.MouseButton1Click:Connect(function()
-	local p,_,c,m = makePanel(
-		"History Track",
-		UDim2.fromOffset(260,260),
-		UDim2.fromScale(0.38,0.25)
+---------------- HISTORY PANEL ----------------
+histBtn.MouseButton1Click:Connect(function()
+	local p,b = createPanel(
+		UDim2.new(0,260,0,260),
+		UDim2.new(0.4,0,0.2,0),
+		"HISTORY"
 	)
-	local body = makeScroll(p)
 
-	for _,file in ipairs(listfiles("autowalk_tracks")) do
-		local b = makeBtn(body, file:match("[^/]+$"))
+	for _,file in ipairs(listfiles("tracks")) do
+		local play = makeBtn(b,file:match("([^/]+)$"))
+		play.MouseButton1Click:Connect(function()
+			track = loadfile(file)()
+			notify("Track dipilih")
+		end)
 
-		b.MouseButton1Click:Connect(function()
+		local del = makeBtn(b,"Delete")
+		del.BackgroundColor3 = Color3.fromRGB(160,60,60)
+		del.MouseButton1Click:Connect(function()
 			delfile(file)
-			notify("Deleted "..file)
-			b:Destroy()
+			play:Destroy()
+			del:Destroy()
+			notify("Track dihapus")
 		end)
 	end
-
-	c.MouseButton1Click:Connect(function() p:Destroy() end)
-	m.MouseButton1Click:Connect(function() p.Visible = false end)
 end)
 
-------------------------------------------------
--- FLY PANEL (MANUAL HP)
-------------------------------------------------
+---------------- FLY PANEL ----------------
 flyBtn.MouseButton1Click:Connect(function()
-	local p,_,c,m = makePanel(
-		"Fly Control",
-		UDim2.fromOffset(220,180),
-		UDim2.fromScale(0.45,0.32)
+	local flying = false
+	local flySpeed = 40
+	local bv,bg,conn
+
+	local p,b = createPanel(
+		UDim2.new(0,240,0,200),
+		UDim2.new(0.3,0,0.25,0),
+		"FLY"
 	)
-	local body = makeScroll(p)
 
-	local onBtn = makeBtn(body,"FLY ON")
-	local offBtn = makeBtn(body,"FLY OFF")
-	local spdLbl = makeBtn(body,"Speed : "..flySpeed)
-	spdLbl.Active = false
-	local plus = makeBtn(body,"+ Speed")
-	local minus = makeBtn(body,"- Speed")
+	local toggle = makeBtn(b,"ON / OFF")
+	local plus = makeBtn(b,"Speed +")
+	local minus = makeBtn(b,"Speed -")
 
-	onBtn.MouseButton1Click:Connect(function()
-		if flyEnabled then return end
-		flyEnabled = true
-		hum:ChangeState(Enum.HumanoidStateType.Physics)
+	toggle.MouseButton1Click:Connect(function()
+		flying = not flying
+		notify("Fly "..(flying and "ON" or "OFF"))
+		if flying then
+			bv = Instance.new("BodyVelocity",root)
+			bg = Instance.new("BodyGyro",root)
+			bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+			bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
 
-		bv = Instance.new("BodyVelocity", root)
-		bg = Instance.new("BodyGyro", root)
-		bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-		bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
-
-		flyConn = RunService.RenderStepped:Connect(function()
-			local dir = hum.MoveDirection
-			bv.Velocity = (cam.CFrame.LookVector * dir.Z + cam.CFrame.RightVector * dir.X) * flySpeed
-			bg.CFrame = cam.CFrame
-		end)
-
-		notify("Fly ON")
-	end)
-
-	offBtn.MouseButton1Click:Connect(function()
-		flyEnabled = false
-		if flyConn then flyConn:Disconnect() end
-		if bv then bv:Destroy() end
-		if bg then bg:Destroy() end
-		hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-		notify("Fly OFF")
+			conn = RunService.RenderStepped:Connect(function()
+				local move = hum.MoveDirection
+				bv.Velocity = cam.CFrame.LookVector * move.Magnitude * flySpeed
+				bg.CFrame = cam.CFrame
+			end)
+		else
+			if conn then conn:Disconnect() end
+			if bv then bv:Destroy() end
+			if bg then bg:Destroy() end
+		end
 	end)
 
 	plus.MouseButton1Click:Connect(function()
 		flySpeed = math.clamp(flySpeed+5,10,200)
-		spdLbl.Text = "Speed : "..flySpeed
-		notify("Fly speed "..flySpeed)
 	end)
 	minus.MouseButton1Click:Connect(function()
 		flySpeed = math.clamp(flySpeed-5,10,200)
-		spdLbl.Text = "Speed : "..flySpeed
-		notify("Fly speed "..flySpeed)
 	end)
-
-	c.MouseButton1Click:Connect(function() p:Destroy() end)
-	m.MouseButton1Click:Connect(function() p.Visible = false end)
 end)
 
-------------------------------------------------
-notify("AutoWalk Full Loaded")
-print("AUTO WALK FULL PRO LOADED (CoreGui Safe)")
+print("AUTO WALK + FLY PRO FINAL LOADED")
