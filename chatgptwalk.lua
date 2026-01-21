@@ -1,6 +1,5 @@
 -- AUTO WALK TRACK SYSTEM - FULL FINAL HP v1
 -- FIXED UI • RECORD • PAUSE • PLAY • STOP • HISTORY • SPEED • LOOP • FLY
--- Made for Mobile / Delta
 
 ---------------- SERVICES ----------------
 local Players = game:GetService("Players")
