@@ -190,8 +190,12 @@ recStop.MouseButton1Click:Connect(function()
         if box.Text == "" then return end
         local data = "return {\n"
         for _,p in ipairs(track) do
-            data ..= string.format("Vector3.new(%f,%f,%f),\n", p.X,p.Y,p.Z)
-        end
+    data ..= string.format(
+        "{pos=Vector3.new(%f,%f,%f), dir=Vector3.new(%f,%f,%f)},\n",
+        p.pos.X, p.pos.Y, p.pos.Z,
+        p.dir.X, p.dir.Y, p.dir.Z
+    )
+                end
         data ..= "}"
         writefile("tracks/"..box.Text..".lua", data)
         panelNotify("Track disimpan: "..box.Text)
@@ -201,7 +205,10 @@ end)
 
 RunService.RenderStepped:Connect(function()
     if recording and not paused then
-        table.insert(track, root.Position)
+        table.insert(track, {
+            pos = root.Position,
+            dir = hum.MoveDirection
+        })
     end
 end)
 
@@ -227,37 +234,40 @@ local function playAutoWalk()
     panelNotify("AutoWalk jalan")
 
     -- 🔥 MATIIN PHYSICS & MAP
-    hum:ChangeState(Enum.HumanoidStateType.Physics)
-    hum.PlatformStand = true
-    hum.AutoRotate = false
-    root.Anchored = true
+    hum.PlatformStand = false
+hum.AutoRotate = true
+hum:ChangeState(Enum.HumanoidStateType.Running)
+root.Anchored = false
 
     task.spawn(function()
         while playing do
-            local target = track[playIndex]
+    local target = track[playIndex]
 
-            if not target then
-                if loopPlay then
-                    playIndex = 1
-                else
-                    stopAutoWalk()
-                    panelNotify("AutoWalk selesai")
-                    break
-                end
-            else
-                -- 🔥 PAKSA POSISI (MAP GA DIPEDULIKAN)
-                root.CFrame = CFrame.new(target)
-
-                -- 🔥 SPEED TETEP PAKE SLIDER LU (1–100)
-                local step = math.clamp(
-                    math.floor(AutoWalkMultiplier),
-                    1, 100
-                )
-                playIndex += step
-
-                RunService.RenderStepped:Wait()
-            end
+    if not target then
+        if loopPlay then
+            playIndex = 1
+        else
+            stopAutoWalk()
+            panelNotify("AutoWalk selesai")
+            break
         end
+    else
+        hum:Move(target.dir, true)
+
+        root.CFrame = root.CFrame:Lerp(
+            CFrame.new(target.pos),
+            0.35
+        )
+
+        local step = math.clamp(
+            math.floor(AutoWalkMultiplier),
+            1, 100
+        )
+        playIndex += step
+
+        RunService.RenderStepped:Wait()
+    end
+            end
     end)
 end
 
@@ -282,7 +292,7 @@ end)
 speedBtn.MouseButton1Click:Connect(function()
     local p,b = createPanel(
         UDim2.new(0,280,0,260),
-        UDim2.new(0.35,0,0.25,0),
+        UDim2.new(0,35,0,0.25,0),
         "SPEED CONTROL"
     )
 
