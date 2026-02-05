@@ -394,9 +394,14 @@ local p,b = createPanel(UDim2.new(0,260,0,260), UDim2.new(0.4,0,0.25,0), "HISTOR
 for _,file in ipairs(listfiles("tracks")) do
 local play = makeBtn(b, file:match("([^/]+)$"))
 play.MouseButton1Click:Connect(function()
-track = loadfile(file)()
-panelNotify("Track loaded")
-playAutoWalk()
+    -- 🔥 RESET STATE BIAR PASTI JALAN
+    stopAutoWalk()
+    task.wait(0.05)
+
+    track = loadfile(file)()
+    panelNotify("Track loaded & playing")
+
+    playAutoWalk()
 end)
 local del = makeBtn(b, "Delete")
 del.BackgroundColor3 = Color3.fromRGB(150,60,60)
