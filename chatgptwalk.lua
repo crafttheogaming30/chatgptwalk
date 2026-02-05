@@ -265,108 +265,113 @@ loopBtn.MouseButton1Click:Connect(function()
     panelNotify("Loop "..(loopPlay and "ON" or "OFF"))
 end)
 
--- SPEED CONTROL PANEL
+-- SPEED CONTROL PANEL (FINAL - SLIDER + BUTTON, HP SAFE)
 speedBtn.MouseButton1Click:Connect(function()
-    local p,b = createPanel(UDim2.new(0, 280, 0, 260), UDim2.new(0.35,0,0.25,0), "SPEED CONTROL")
+    local p,b = createPanel(
+        UDim2.new(0,280,0,260),
+        UDim2.new(0.35,0,0.25,0),
+        "SPEED CONTROL"
+    )
 
-    -- AUTO WALK SPEED
-    local awLabel = Instance.new("TextLabel", b)
-    awLabel.Text = "AutoWalk Speed"
-    awLabel.Font = Enum.Font.GothamBold
-    awLabel.TextSize = 14
-    awLabel.TextColor3 = Color3.new(1,1,1)
-    awLabel.BackgroundTransparency = 1
-    awLabel.Position = UDim2.fromOffset(10, 10)
-    awLabel.Size = UDim2.new(1,-20,0,20)
+    local function makeSpeedControl(title, minV, maxV, step, getVal, setVal)
+        local label = Instance.new("TextLabel", b)
+        label.Size = UDim2.new(1,0,0,20)
+        label.BackgroundTransparency = 1
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 14
+        label.TextColor3 = Color3.new(1,1,1)
 
-    local awSlider = Instance.new("Frame", b)
-    awSlider.Size = UDim2.new(1,-20,0,20)
-    awSlider.Position = UDim2.fromOffset(10,35)
-    awSlider.BackgroundColor3 = Color3.fromRGB(40,55,85)
-    Instance.new("UICorner", awSlider)
+        local bar = Instance.new("Frame", b)
+        bar.Size = UDim2.new(1,-20,0,18)
+        bar.BackgroundColor3 = Color3.fromRGB(40,55,85)
+        Instance.new("UICorner", bar)
 
-    local handle = Instance.new("Frame", awSlider)
-    handle.Size = UDim2.new(0,20,1,0)
-    handle.Position = UDim2.new(0,0,0,0)
-    handle.BackgroundColor3 = Color3.fromRGB(200,200,255)
-    Instance.new("UICorner", handle)
+        local fill = Instance.new("Frame", bar)
+        fill.BackgroundColor3 = Color3.fromRGB(180,200,255)
+        fill.Size = UDim2.new(0,0,1,0)
+        Instance.new("UICorner", fill)
 
-    local dragging = false
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
+        local function refresh()
+            local v = getVal()
+            local pct = (v-minV)/(maxV-minV)
+            fill.Size = UDim2.new(pct,0,1,0)
+            label.Text = title.." : "..string.format("%.2f", v)
         end
-    end)
-    handle.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+        local dragging = false
+        local function setFromX(x)
+            local pct = math.clamp(
+                (x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,
+                0,1
+            )
+            local v = math.floor((minV + (maxV-minV)*pct)*100)/100
+            setVal(v)
+            refresh()
+        end
+
+        bar.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.Touch
+            or i.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                setFromX(i.Position.X)
+            end
+        end)
+
+        UIS.InputChanged:Connect(function(i)
+            if dragging and
+               (i.UserInputType == Enum.UserInputType.Touch
+               or i.UserInputType == Enum.UserInputType.MouseMovement) then
+                setFromX(i.Position.X)
+            end
+        end)
+
+        UIS.InputEnded:Connect(function()
             dragging = false
-        end
-    end)
+        end)
 
-    RunService.RenderStepped:Connect(function()
-        if dragging then
-            local mousePos = UIS:GetMouseLocation().X
-            local sliderPos = math.clamp(mousePos - awSlider.AbsolutePosition.X, 0, awSlider.AbsoluteSize.X)
-            handle.Position = UDim2.new(sliderPos/awSlider.AbsoluteSize.X,0,0,0)
-            AutoWalkMultiplier = 1 + (sliderPos/awSlider.AbsoluteSize.X)
-            panelNotify("AutoWalk x"..string.format("%.2f", AutoWalkMultiplier))
-        end
-    end)
+        local plus = makeBtn(b,"+")
+        plus.Size = UDim2.new(0.48,0,0,28)
 
-    local awPlus = makeBtn(b,"+")
+        local minus = makeBtn(b,"-")
+        minus.Size = UDim2.new(0.48,0,0,28)
+
+        plus.MouseButton1Click:Connect(function()
+            setVal(math.min(getVal()+step, maxV))
+            refresh()
+        end)
+
+        minus.MouseButton1Click:Connect(function()
+            setVal(math.max(getVal()-step, minV))
+            refresh()
+        end)
+
+        refresh()
+        return plus, minus
+    end
+
+    -- AUTOWALK SPEED
+    local awPlus, awMin = makeSpeedControl(
+        "AutoWalk Speed",
+        0.5, 3,
+        0.1,
+        function() return AutoWalkMultiplier end,
+        function(v) AutoWalkMultiplier = v end
+    )
+
     awPlus.Position = UDim2.fromOffset(10,70)
-    local awMin = makeBtn(b,"-")
-    awMin.Position = UDim2.fromOffset(140,70)
-    awPlus.MouseButton1Click:Connect(function()
-        AutoWalkMultiplier = math.min(AutoWalkMultiplier+0.2,5)
-        panelNotify("AutoWalk x"..string.format("%.2f", AutoWalkMultiplier))
-    end)
-    awMin.MouseButton1Click:Connect(function()
-        AutoWalkMultiplier = math.max(AutoWalkMultiplier-0.2,1)
-        panelNotify("AutoWalk x"..string.format("%.2f", AutoWalkMultiplier))
-    end)
+    awMin.Position  = UDim2.fromOffset(150,70)
 
-    -- FLY SPEED (Slider + Button)
-    local flyLabel = awLabel:Clone()
-    flyLabel.Parent = b
-    flyLabel.Text = "Fly Speed"
-    flyLabel.Position = UDim2.fromOffset(10,110)
+    -- FLY SPEED
+    local flyPlus, flyMin = makeSpeedControl(
+        "Fly Speed",
+        0.5, 5,
+        0.2,
+        function() return FlyMultiplier end,
+        function(v) FlyMultiplier = v end
+    )
 
-    local flySlider = awSlider:Clone()
-    flySlider.Parent = b
-    flySlider.Position = UDim2.fromOffset(10,135)
-    local flyHandle = flySlider:FindFirstChildWhichIsA("Frame")
-    local flyDragging = false
-    flyHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then flyDragging = true end
-    end)
-    flyHandle.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then flyDragging = false end
-    end)
-    RunService.RenderStepped:Connect(function()
-        if flyDragging then
-            local mousePos = UIS:GetMouseLocation().X
-            local sliderPos = math.clamp(mousePos - flySlider.AbsolutePosition.X, 0, flySlider.AbsoluteSize.X)
-            flyHandle.Position = UDim2.new(sliderPos/flySlider.AbsoluteSize.X,0,0,0)
-            FlyMultiplier = 1 + 2*(sliderPos/flySlider.AbsoluteSize.X)
-            panelNotify("Fly x"..string.format("%.2f", FlyMultiplier))
-        end
-    end)
-
-    local flyPlus = awPlus:Clone()
-    flyPlus.Parent = b
-    flyPlus.Position = UDim2.fromOffset(10,170)
-    local flyMin = awMin:Clone()
-    flyMin.Parent = b
-    flyMin.Position = UDim2.fromOffset(140,170)
-    flyPlus.MouseButton1Click:Connect(function()
-        FlyMultiplier = math.min(FlyMultiplier+0.5,10)
-        panelNotify("Fly x"..string.format("%.2f", FlyMultiplier))
-    end)
-    flyMin.MouseButton1Click:Connect(function()
-        FlyMultiplier = math.max(FlyMultiplier-0.5,1)
-        panelNotify("Fly x"..string.format("%.2f", FlyMultiplier))
-    end)
+    flyPlus.Position = UDim2.fromOffset(10,160)
+    flyMin.Position  = UDim2.fromOffset(150,160)
 end)
 
 -- HISTORY PANEL
@@ -377,6 +382,7 @@ histBtn.MouseButton1Click:Connect(function()
         play.MouseButton1Click:Connect(function()
             track = loadfile(file)()
             panelNotify("Track loaded")
+            playAutoWalk()
         end)
         local del = makeBtn(b, "Delete")
         del.BackgroundColor3 = Color3.fromRGB(150,60,60)
@@ -415,9 +421,5 @@ flyBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- APPLY MULTIPLIER
-RunService.RenderStepped:Connect(function()
-    hum.WalkSpeed = walkSpeed * AutoWalkMultiplier
-end)
 
 panelNotify("AUTO WALK + FLY PRO READY")
