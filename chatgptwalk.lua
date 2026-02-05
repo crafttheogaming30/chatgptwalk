@@ -222,23 +222,30 @@ end)
 local function stopAutoWalk()
     playing = false
 
-    hum:Move(Vector3.zero, false)
+    root.Anchored = false
     hum.PlatformStand = false
     hum.AutoRotate = true
-    hum.WalkSpeed = walkSpeed
+    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
 end
 
 local function playAutoWalk()
-    if playing or #track < 2 then return end
+    if #track < 2 or playing then return end
 
     playing = true
     playIndex = 1
     panelNotify("AutoWalk jalan")
 
+    -- 🔥 MATIIN MAP, TAPI ANIMASI TETAP HIDUP
+    hum:ChangeState(Enum.HumanoidStateType.Running)
+    hum.PlatformStand = false
+    hum.AutoRotate = true
+    root.Anchored = true
+
     task.spawn(function()
         while playing do
-            local data = track[playIndex]
-            if not data then
+            local t = track[playIndex]
+
+            if not t then
                 if loopPlay then
                     playIndex = 1
                 else
@@ -247,17 +254,18 @@ local function playAutoWalk()
                     break
                 end
             else
-                -- 🔥 GERAK REAL (ANIMASI JALAN AKTIF)
-                hum.WalkSpeed = walkSpeed * AutoWalkMultiplier
-                hum:Move(data.dir, true)
+                -- 🔥 PAKSA POSISI + ARAH
+                root.CFrame = CFrame.new(t.pos, t.pos + t.dir)
 
-                -- 🔥 POSISI DIHALUSIN (ANTI JATUH)
-                root.CFrame = root.CFrame:Lerp(
-                    CFrame.new(data.pos),
-                    0.25
+                -- 🔥 TRIGGER ANIMASI JALAN
+                hum:Move(t.dir, true)
+
+                local step = math.clamp(
+                    math.floor(AutoWalkMultiplier),
+                    1, 100
                 )
+                playIndex += step
 
-                playIndex += 1
                 RunService.RenderStepped:Wait()
             end
         end
@@ -394,13 +402,29 @@ local p,b = createPanel(UDim2.new(0,260,0,260), UDim2.new(0.4,0,0.25,0), "HISTOR
 for _,file in ipairs(listfiles("tracks")) do
 local play = makeBtn(b, file:match("([^/]+)$"))
 play.MouseButton1Click:Connect(function()
-    -- 🔥 RESET STATE BIAR PASTI JALAN
     stopAutoWalk()
     task.wait(0.05)
 
-    track = loadfile(file)()
-    panelNotify("Track loaded & playing")
+    local raw = loadfile(file)()
+    track = {}
 
+    for i,v in ipairs(raw) do
+        if typeof(v) == "Vector3" then
+            -- 🔥 TRACK LAMA
+            table.insert(track,{
+                pos = v,
+                dir = Vector3.new(0,0,-1)
+            })
+        else
+            -- 🔥 TRACK BARU
+            table.insert(track,{
+                pos = v.pos,
+                dir = v.dir.Magnitude > 0 and v.dir or Vector3.new(0,0,-1)
+            })
+        end
+    end
+
+    panelNotify("Track loaded & playing")
     playAutoWalk()
 end)
 local del = makeBtn(b, "Delete")
