@@ -205,47 +205,58 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- AUTOWALK LOGIC
-playBtn.MouseButton1Click:Connect(function()
-    if #track < 2 then return end
+-- =========================
+-- AUTOWALK FIX (REAL WALK)
+-- =========================
+
+local function stopAutoWalk()
+    playing = false
+    hum:Move(Vector3.zero, false)
+end
+
+local function playAutoWalk()
+    if #track < 2 or playing then return end
+
     playing = true
     playIndex = 1
-
-    bv = Instance.new("BodyVelocity", root)
-    bg = Instance.new("BodyGyro", root)
-    bv.MaxForce = Vector3.new(1e6,1e6,1e6)
-    bg.MaxTorque = Vector3.new(1e6,1e6,1e6)
-
     panelNotify("AutoWalk jalan")
 
-    conn = RunService.RenderStepped:Connect(function()
-        if not playing then return end
-        local target = track[math.floor(playIndex)]
-        if target then
-            local dir = (target - root.Position)
-            bv.Velocity = dir.Unit * (walkSpeed * AutoWalkMultiplier)
-            bg.CFrame = CFrame.new(root.Position, root.Position + dir)
-            playIndex += walkSpeed/10
-        else
-            if loopPlay then
-                playIndex = 1
+    task.spawn(function()
+        while playing do
+            local target = track[playIndex]
+
+            if not target then
+                if loopPlay then
+                    playIndex = 1
+                else
+                    stopAutoWalk()
+                    panelNotify("AutoWalk selesai")
+                    break
+                end
             else
-                playing = false
-                bv:Destroy()
-                bg:Destroy()
-                conn:Disconnect()
-                panelNotify("AutoWalk selesai")
+                hum.WalkSpeed = walkSpeed * AutoWalkMultiplier
+                hum:MoveTo(target)
+
+                repeat
+                    task.wait()
+                until not playing or
+                      (root.Position - target).Magnitude < 1.5
+
+                playIndex += 1
             end
         end
     end)
+end
+
+playBtn.MouseButton1Click:Connect(function()
+    playAutoWalk()
 end)
 
 stopBtn.MouseButton1Click:Connect(function()
-    playing = false
-    if bv then bv:Destroy() end
-    if bg then bg:Destroy() end
+    stopAutoWalk()
     panelNotify("AutoWalk stop")
 end)
+
 
 -- LOOP
 loopBtn.MouseButton1Click:Connect(function()
