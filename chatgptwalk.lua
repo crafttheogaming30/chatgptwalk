@@ -211,7 +211,12 @@ end)
 
 local function stopAutoWalk()
     playing = false
-    hum:Move(Vector3.zero, false)
+
+    hum.PlatformStand = false
+    hum.AutoRotate = true
+    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+
+    root.Anchored = false
 end
 
 local function playAutoWalk()
@@ -220,6 +225,12 @@ local function playAutoWalk()
     playing = true
     playIndex = 1
     panelNotify("AutoWalk jalan")
+
+    -- 🔥 MATIIN PHYSICS & MAP
+    hum:ChangeState(Enum.HumanoidStateType.Physics)
+    hum.PlatformStand = true
+    hum.AutoRotate = false
+    root.Anchored = true
 
     task.spawn(function()
         while playing do
@@ -234,15 +245,17 @@ local function playAutoWalk()
                     break
                 end
             else
-                hum.WalkSpeed = walkSpeed * AutoWalkMultiplier
-                hum:MoveTo(target)
+                -- 🔥 PAKSA POSISI (MAP GA DIPEDULIKAN)
+                root.CFrame = CFrame.new(target)
 
-                repeat
-                    task.wait()
-                until not playing or
-                      (root.Position - target).Magnitude < 1.5
+                -- 🔥 SPEED TETEP PAKE SLIDER LU (1–100)
+                local step = math.clamp(
+                    math.floor(AutoWalkMultiplier),
+                    1, 100
+                )
+                playIndex += step
 
-                playIndex += 1
+                RunService.RenderStepped:Wait()
             end
         end
     end)
